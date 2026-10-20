@@ -308,8 +308,10 @@ export function ResumeEditor({ doc, entries, header, jobs }: ResumeEditorProps) 
       {frozen && (
         <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
           <Lock className="h-4 w-4 shrink-0" />
-          Sent{doc.submittedAt ? ` on ${new Date(doc.submittedAt).toLocaleDateString("en-SG", { dateStyle: "medium" })}` : ""}. This is frozen as the record of what went out
-          {doc.pdfPath ? <span className="text-muted-foreground"> (saved at {doc.pdfPath})</span> : null}. Duplicate it to make changes.
+          <p>
+            Sent{doc.submittedAt ? ` on ${new Date(doc.submittedAt).toLocaleDateString("en-SG", { dateStyle: "medium" })}` : ""}. This is frozen as the record of what went out
+            {doc.pdfPath ? <span className="text-muted-foreground"> (saved at {doc.pdfPath})</span> : null}. Duplicate it to make changes.
+          </p>
         </div>
       )}
       {doc.status === "approved" && (

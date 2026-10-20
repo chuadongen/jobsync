@@ -1,17 +1,15 @@
-import { getRecentJobs } from "@/actions/dashboard.actions";
-import JobsApplied from "@/components/dashboard/JobsAppliedCard";
-
 import { Metadata } from "next";
+import { requireUser } from "@/actions/shared";
+import { DashboardView } from "@/components/dashboard/DashboardView";
+import { getDashboard } from "@/lib/dashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
 export default async function Dashboard() {
-  await getRecentJobs();
-  return (
-    <div className="grid gap-4 @3xl/main:col-span-3">
-      <JobsApplied />
-    </div>
-  );
+  const user = await requireUser();
+  const now = new Date();
+  const data = await getDashboard(user.id, now);
+  return <DashboardView data={data} now={now} />;
 }

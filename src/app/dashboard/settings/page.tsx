@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DataSettings from "@/components/settings/DataSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import McpAccessSettings from "@/components/settings/McpAccessSettings";
 import SettingsSidebar, { type SettingsSection } from "@/components/settings/SettingsSidebar";
@@ -20,6 +21,7 @@ function Settings() {
         />
         <div className="flex-1 min-w-0">
           {activeSection === "mcp-access" && <McpAccessSettings />}
+          {activeSection === "data" && <DataSettings />}
           {activeSection === "appearance" && <DisplaySettings />}
         </div>
       </div>

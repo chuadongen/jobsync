@@ -1,10 +1,10 @@
 "use client";
 
-import { Palette, Plug } from "lucide-react";
+import { Database, Palette, Plug } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 
-export type SettingsSection = "mcp-access" | "appearance";
+export type SettingsSection = "mcp-access" | "data" | "appearance";
 
 const SETTINGS_SECTIONS: {
   id: SettingsSection;
@@ -12,6 +12,7 @@ const SETTINGS_SECTIONS: {
   icon: typeof Plug;
 }[] = [
   { id: "mcp-access", label: "MCP Access", icon: Plug },
+  { id: "data", label: "Data & Backup", icon: Database },
   { id: "appearance", label: "Appearance", icon: Palette },
 ];
 

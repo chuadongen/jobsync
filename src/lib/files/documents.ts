@@ -1,7 +1,11 @@
 import { z } from "zod";
 import prisma from "@/lib/db";
 import { APP_CONSTANTS } from "@/lib/constants";
-import { DOCUMENT_CATEGORY_VALUES } from "@/models/document.model";
+import {
+  ALLOWED_DOCUMENT_EXTENSIONS,
+  DOCUMENT_CATEGORY_VALUES,
+  DOCUMENT_FILE_TYPES,
+} from "@/models/document.model";
 import {
   applicationFolder,
   removeDataFile,
@@ -12,20 +16,7 @@ import {
 
 // Extension, not the browser's MIME claim, decides what is accepted: the
 // claim is client-supplied and the extension is what the file is opened by.
-const ALLOWED = {
-  ".pdf": "application/pdf",
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".doc": "application/msword",
-  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".txt": "text/plain",
-  ".md": "text/markdown",
-} as const;
-
-export const ALLOWED_DOCUMENT_EXTENSIONS = Object.keys(ALLOWED);
+const ALLOWED = DOCUMENT_FILE_TYPES;
 
 function mimeFor(fileName: string): string {
   const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();

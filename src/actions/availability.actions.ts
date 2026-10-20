@@ -30,6 +30,9 @@ export const saveAvailabilityBlock = async (form: AvailabilityForm) =>
 export const deleteAvailabilityBlock = async (id: string) =>
   run((userId) => availability.deleteBlock(userId, id), "Failed to delete the block.");
 
+export const getRolePeriods = async () =>
+  read((userId) => availability.rolePeriods(userId), "Failed to load role periods.");
+
 export const getJobClashes = async () =>
   read((userId) => availability.jobClashes(userId), "Failed to check clashes.");
 

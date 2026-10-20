@@ -162,10 +162,14 @@ export function CreateLetterDialog({
   open,
   onOpenChange,
   jobs,
-}: DialogProps & { jobs: JobOption[] }) {
+  defaultJobId,
+}: DialogProps & { jobs: JobOption[]; defaultJobId?: string }) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [title, setTitle] = useState(() => {
+    const job = jobs.find((j) => j.id === defaultJobId);
+    return job ? `Cover letter · ${job.label}` : "";
+  });
+  const [jobId, setJobId] = useState<string | null>(defaultJobId ?? null);
   const [content, setContent] = useState("");
   const [isPending, startTransition] = useTransition();
 

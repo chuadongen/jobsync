@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { FileText, FolderOpen, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ClipboardCopy, FilePlus2, FileText, FolderOpen, Mail, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreateLetterDialog, CreateVariantDialog } from "@/components/resumes/CreateResumeDialogs";
+import { DocumentDialog } from "@/components/documents/DocumentDialog";
+import { getResumeDocs } from "@/actions/resume.actions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getDocStatusBadgeColor } from "@/lib/badge-colors";
 import { docStatusLabel } from "@/models/resume.model";
@@ -34,24 +40,87 @@ function Section({
 // Everything that goes out with this application. Tailoring happens in
 // Claude over MCP; this tab is where the results land for review.
 export function JobApplicationTab({ job, onCopyPrompt }: JobApplicationTabProps) {
+  const router = useRouter();
   const resumes = job.resumeDocs ?? [];
   const letters = job.coverLetters ?? [];
   const documents = job.documents ?? [];
+  const [open, setOpen] = useState<"variant" | "letter" | "upload" | null>(null);
+  const [bases, setBases] = useState<{ id: string; name: string; targetRole: string | null }[]>([]);
+  // The pickers only need this job; it is preselected and the only choice.
+  const jobs = [
+    {
+      id: job.id,
+      label: `${job.Company?.label ?? "Company"} · ${job.JobTitle?.label ?? "Role"}`,
+      status: job.Status?.label ?? "",
+    },
+  ];
+
+  const openVariant = async () => {
+    const result = await getResumeDocs({ kind: "base" });
+    setBases(result.success ? (result.data as typeof bases) : []);
+    setOpen("variant");
+  };
+
+  const actions = (
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" onClick={onCopyPrompt}>
+        <ClipboardCopy className="mr-1.5 h-4 w-4" /> Copy Claude Prompt
+      </Button>
+      <Button size="sm" variant="outline" onClick={openVariant}>
+        <FilePlus2 className="mr-1.5 h-4 w-4" /> Resume from a base
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => setOpen("letter")}>
+        <Mail className="mr-1.5 h-4 w-4" /> Write a letter
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => setOpen("upload")}>
+        <Upload className="mr-1.5 h-4 w-4" /> Upload document
+      </Button>
+    </div>
+  );
+
+  const dialogs = (
+    <>
+      {open === "variant" && (
+        <CreateVariantDialog
+          open
+          onOpenChange={(o) => !o && setOpen(null)}
+          bases={bases}
+          jobs={jobs}
+          defaultJobId={job.id}
+        />
+      )}
+      {open === "letter" && (
+        <CreateLetterDialog open onOpenChange={(o) => !o && setOpen(null)} jobs={jobs} defaultJobId={job.id} />
+      )}
+      <DocumentDialog
+        open={open === "upload"}
+        onOpenChange={(o) => !o && setOpen(null)}
+        document={null}
+        jobs={jobs}
+        defaultJobId={job.id}
+        onSaved={() => router.refresh()}
+      />
+    </>
+  );
 
   if (resumes.length + letters.length + documents.length === 0) {
     return (
-      <JobTabEmptyState
-        icon={FileText}
-        title="Nothing prepared yet"
-        description="Copy the Claude prompt, paste it into Claude, and the tailored draft will appear here for your approval."
-        actionLabel="Copy Claude Prompt"
-        onAction={onCopyPrompt}
-      />
+      <div className="space-y-4">
+        <JobTabEmptyState
+          icon={FileText}
+          title="Nothing prepared yet"
+          description="Copy the Claude prompt and paste it into Claude: the tailored draft lands here for your approval. Or start a resume from one of your bases yourself."
+        />
+        <div className="flex justify-center">{actions}</div>
+        {dialogs}
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {actions}
+      {dialogs}
       {resumes.length > 0 && (
         <Section title="Resumes">
           {resumes.map((doc) => (

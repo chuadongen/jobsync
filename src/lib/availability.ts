@@ -70,28 +70,33 @@ export async function clashesFor(
   }));
 }
 
+export const CLOSED_STATUSES = ["rejected", "withdrawn", "archived", "expired", "offer-declined"];
+
+// Open applications with a known role period, for the availability timeline.
+export async function rolePeriods(userId: string) {
+  return prisma.job.findMany({
+    where: {
+      userId,
+      startDate: { not: null },
+      endDate: { not: null },
+      Status: { value: { notIn: CLOSED_STATUSES } },
+    },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      JobTitle: { select: { label: true } },
+      Company: { select: { label: true } },
+      Status: { select: { label: true, value: true } },
+    },
+    orderBy: { startDate: "asc" },
+  });
+}
+
 // Every job with a role period that runs into a block, for the dashboard
 // and the availability page. Closed applications are left out.
 export async function jobClashes(userId: string) {
-  const [jobs, blocks] = await Promise.all([
-    prisma.job.findMany({
-      where: {
-        userId,
-        startDate: { not: null },
-        endDate: { not: null },
-        Status: { value: { notIn: ["rejected", "withdrawn", "archived", "expired", "offer-declined"] } },
-      },
-      select: {
-        id: true,
-        startDate: true,
-        endDate: true,
-        JobTitle: { select: { label: true } },
-        Company: { select: { label: true } },
-        Status: { select: { label: true, value: true } },
-      },
-    }),
-    listBlocks(userId),
-  ]);
+  const [jobs, blocks] = await Promise.all([rolePeriods(userId), listBlocks(userId)]);
   return jobs
     .map((job) => ({
       job,

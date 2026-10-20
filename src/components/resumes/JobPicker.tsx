@@ -22,12 +22,14 @@ export function JobPicker({
   onChange,
   allowNone = false,
   id,
+  disabled = false,
 }: {
   jobs: JobOption[];
   value: string | null;
   onChange: (id: string | null) => void;
   allowNone?: boolean;
   id?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selected = jobs.find((j) => j.id === value);
@@ -39,6 +41,7 @@ export function JobPicker({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className="w-full justify-between font-normal"
         >
           <span className="truncate">{selected?.label ?? (allowNone ? "No job" : "Pick a job")}</span>

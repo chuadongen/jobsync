@@ -4,11 +4,12 @@ import { getDocument } from "@/lib/files/documents";
 import { readDataFile } from "@/lib/files/storage";
 import { contentDisposition } from "@/lib/files/responses";
 
-// PDFs and images open in the browser tab; everything else downloads.
+// PDFs and images open in the browser tab unless ?download=1; everything
+// else always downloads.
 const INLINE = new Set(["application/pdf", "image/png", "image/jpeg", "text/plain"]);
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
@@ -34,9 +35,12 @@ export async function GET(
       "Content-Type": document.mimeType,
       "Content-Disposition": contentDisposition(
         document.fileName,
-        INLINE.has(document.mimeType) ? "inline" : "attachment",
+        INLINE.has(document.mimeType) && !new URL(req.url).searchParams.has("download")
+          ? "inline"
+          : "attachment",
       ),
       "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

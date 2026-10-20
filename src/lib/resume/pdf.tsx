@@ -237,7 +237,8 @@ export function CoverLetterPdfDocument({
   const paragraphs = content
     .replace(/\r\n/g, "\n")
     .split(/\n\s*\n/)
-    .map((p) => p.replace(/\n/g, " ").trim())
+    // A single line break is kept, so a sign-off ("Yours sincerely,\nName") holds its shape.
+    .map((p) => p.split("\n").map((l) => l.trim()).join("\n").trim())
     .filter(Boolean);
   return (
     <Document title={title} author={header.fullName} creator="JobSync">
