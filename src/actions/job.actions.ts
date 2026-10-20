@@ -11,7 +11,7 @@ export {
 
 export { addJob, updateJob, deleteJobById } from "./job/mutations";
 
-export { updateJobStatus, saveJobMatchResult } from "./job/status";
+export { updateJobStatus } from "./job/status";
 
 export {
   getStatusList,

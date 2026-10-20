@@ -1,5 +1,3 @@
-import { ActivityType } from "./activity.model";
-
 export const TASK_STATUSES = {
   "in-progress": "In Progress",
   "complete": "Complete",
@@ -13,8 +11,7 @@ export type TaskGroupBy =
   | "none"
   | "createdDate"
   | "dueDate"
-  | "updatedDate"
-  | "activityType";
+  | "updatedDate";
 
 export interface Task {
   id: string;
@@ -25,13 +22,6 @@ export interface Task {
   priority: number;
   percentComplete: number;
   dueDate?: Date | null;
-  activityTypeId?: string | null;
-  activityType?: ActivityType | null;
-  activities?: { id: string }[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface TaskWithActivityType extends Task {
-  activityType: ActivityType | null;
 }

@@ -1,7 +1,7 @@
 import MarkdownIt from "markdown-it";
 import prisma from "@/lib/db";
 import { APP_CONSTANTS } from "@/lib/constants";
-import { normalizeJobUrl } from "@/lib/scraper/utils";
+import { normalizeJobUrl } from "@/lib/jobs/jobUrl";
 import { classifyDescriptionCompleteness } from "@/lib/jobs/descriptionCompleteness";
 import type { DescriptionCompleteness } from "@/models/job.model";
 import {

@@ -31,18 +31,14 @@ import SelectFormCtrl from "../Select";
 import { DatePicker } from "../DatePicker";
 import TiptapEditor from "../TiptapEditor";
 import { Input } from "../ui/input";
-import { Combobox } from "../ComboBox";
 import { Slider } from "../ui/slider";
-import { ActivityType } from "@/models/activity.model";
 
 type TaskFormProps = {
-  activityTypes: ActivityType[];
   editTask?: Task | null;
   resetEditTask: () => void;
   onTaskSaved: () => void;
   dialogOpen: boolean;
   setDialogOpen: (open: boolean) => void;
-  onSaveAndStart?: (taskId: string) => void;
 };
 
 const statusOptions = Object.entries(TASK_STATUSES).map(([value, label]) => ({
@@ -52,13 +48,11 @@ const statusOptions = Object.entries(TASK_STATUSES).map(([value, label]) => ({
 }));
 
 export function TaskForm({
-  activityTypes,
   editTask,
   resetEditTask,
   onTaskSaved,
   dialogOpen,
   setDialogOpen,
-  onSaveAndStart,
 }: TaskFormProps) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<z.infer<typeof AddTaskFormSchema>>({
@@ -70,7 +64,6 @@ export function TaskForm({
       priority: 5,
       percentComplete: 0,
       dueDate: undefined,
-      activityTypeId: undefined,
     },
   });
 
@@ -90,7 +83,6 @@ export function TaskForm({
         priority: editTask.priority,
         percentComplete: editTask.percentComplete,
         dueDate: editTask.dueDate ? new Date(editTask.dueDate) : undefined,
-        activityTypeId: editTask.activityTypeId || undefined,
       });
     } else {
       reset({
@@ -100,36 +92,26 @@ export function TaskForm({
         priority: 5,
         percentComplete: 0,
         dueDate: undefined,
-        activityTypeId: undefined,
       });
     }
   }, [editTask, reset]);
 
-  function onSubmit(
-    data: z.infer<typeof AddTaskFormSchema>,
-    startAfterSave = false,
-  ) {
+  function onSubmit(data: z.infer<typeof AddTaskFormSchema>) {
     startTransition(async () => {
       const result = editTask ? await updateTask(data) : await createTask(data);
       toastActionResult<Task>(result, {
         success: `Task has been ${editTask ? "updated" : "created"} successfully`,
-        onSuccess: (task) => {
+        onSuccess: () => {
           reset();
           setDialogOpen(false);
           resetEditTask();
           onTaskSaved();
-          if (startAfterSave && task?.id) {
-            onSaveAndStart?.(task.id);
-          }
         },
       });
     });
   }
 
-  const onSaveClick = form.handleSubmit((data) => onSubmit(data, false));
-  const onSaveAndStartClick = form.handleSubmit((data) =>
-    onSubmit(data, true),
-  );
+  const onSaveClick = form.handleSubmit(onSubmit);
 
   const pageTitle = editTask ? "Edit Task" : "Add Task";
   const pageDescription = editTask
@@ -167,30 +149,6 @@ export function TaskForm({
                       <FormLabel>Title *</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter task title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Activity Type */}
-              <div>
-                <FormField
-                  control={form.control}
-                  name="activityTypeId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Activity Type</FormLabel>
-                      <FormControl>
-                        <Combobox
-                          options={activityTypes}
-                          field={{
-                            ...field,
-                            name: "activityType",
-                          }}
-                          creatable
-                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -349,18 +307,6 @@ export function TaskForm({
                       Cancel
                     </Button>
                   </div>
-                  {onSaveAndStart && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="mt-2 md:mt-0"
-                      onClick={onSaveAndStartClick}
-                      disabled={isPending}
-                      data-testid="save-and-start-task-btn"
-                    >
-                      Save & Start
-                    </Button>
-                  )}
                   <Button
                     type="submit"
                     disabled={isPending}

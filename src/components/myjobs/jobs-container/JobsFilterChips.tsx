@@ -21,18 +21,15 @@ export function JobsFilterChips({
 }) {
   if (!hasJobFacets(facets)) return null;
 
-  const statusLabels = [
-    ...facets.statuses.map(
-      (value) => statuses.find((s) => s.value === value)?.label ?? value,
-    ),
-    ...(facets.acceptedDiscovered ? ["Accepted (discovered)"] : []),
-  ];
+  const statusLabels = facets.statuses.map(
+    (value) => statuses.find((s) => s.value === value)?.label ?? value,
+  );
 
   const chips = [
     {
       name: "Status",
       value: statusLabels.join(", "),
-      clear: { statuses: [], acceptedDiscovered: false },
+      clear: { statuses: [] },
     },
     {
       name: "Job type",
@@ -43,11 +40,6 @@ export function JobsFilterChips({
       name: "Workplace",
       value: facets.workplaces.map((c) => getWorkplaceTypeLabel(c)).join(", "),
       clear: { workplaces: [] },
-    },
-    {
-      name: "Dismissed",
-      value: facets.includeDismissed ? "Included" : "",
-      clear: { includeDismissed: false },
     },
   ].filter((chip) => chip.value);
 

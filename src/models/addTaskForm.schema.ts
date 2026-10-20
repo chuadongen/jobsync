@@ -27,5 +27,4 @@ export const AddTaskFormSchema = z.object({
       },
       { message: "Due date cannot be in the past." }
     ),
-  activityTypeId: z.string().optional().nullable(),
 });

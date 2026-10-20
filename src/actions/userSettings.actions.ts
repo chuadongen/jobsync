@@ -5,7 +5,6 @@ import { requireUser } from "./shared";
 import {
   UserSettingsData,
   defaultUserSettings,
-  AiSettings,
   DisplaySettings,
 } from "@/models/userSettings.model";
 
@@ -65,11 +64,6 @@ export const updateUserSettings = async (
         ...defaultUserSettings,
         ...currentSettings,
         ...settings,
-        ai: {
-          ...defaultUserSettings.ai,
-          ...currentSettings.ai,
-          ...settings.ai,
-        },
         display: {
           ...defaultUserSettings.display,
           ...currentSettings.display,
@@ -80,7 +74,6 @@ export const updateUserSettings = async (
       mergedSettings = {
         ...defaultUserSettings,
         ...settings,
-        ai: { ...defaultUserSettings.ai, ...settings.ai },
         display: { ...defaultUserSettings.display, ...settings.display },
       };
     }
@@ -109,12 +102,6 @@ export const updateUserSettings = async (
     const msg = "Failed to update user settings.";
     return handleError(error, msg);
   }
-};
-
-export const updateAiSettings = async (
-  aiSettings: AiSettings
-): Promise<any | undefined> => {
-  return updateUserSettings({ ai: aiSettings });
 };
 
 export const updateDisplaySettings = async (

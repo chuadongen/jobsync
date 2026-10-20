@@ -23,7 +23,6 @@ export async function loadTelemetry(env: TelemetryEnv = {}) {
   return {
     config: await import("@/lib/telemetry/config"),
     span: await import("@/lib/telemetry/span"),
-    genai: await import("@/lib/telemetry/genai"),
     logger: await import("@/lib/telemetry/logger"),
     otlp,
   };

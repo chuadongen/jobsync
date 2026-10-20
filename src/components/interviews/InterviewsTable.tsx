@@ -36,7 +36,6 @@ function InterviewsTable({
           <TableHead>Round</TableHead>
           <TableHead className="hidden md:table-cell">Format</TableHead>
           <TableHead className="hidden lg:table-cell">Interviewers</TableHead>
-          <TableHead className="hidden sm:table-cell">Prep</TableHead>
           <TableHead>Outcome</TableHead>
           <TableHead>
             <span className="sr-only">Actions</span>

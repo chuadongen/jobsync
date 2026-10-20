@@ -19,10 +19,6 @@ vi.mock("@/actions/job.actions", () => ({
   updateJob: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-vi.mock("@/actions/profile.actions", () => ({
-  getResumeList: vi.fn().mockResolvedValue({ success: true, data: [] }),
-}));
-
 vi.mock("@/actions/note.actions", () => ({
   getNotesByJobId: vi.fn().mockResolvedValue({ success: true, data: [] }),
   addNote: vi.fn(),
@@ -289,7 +285,8 @@ describe("AddJob Component", () => {
         title: "1xx",
         company: "2zz",
         location: "1yy",
-        type: "FT",
+        // Internship is the first job type, so it is the default
+        type: "IN",
         workplaceType: "ONSITE",
         source: "1359dac4-a397-4461-b747-382706dcbe79",
         status: "d7ba200a-6dc1-4ea8-acff-29ebb0d4676a",

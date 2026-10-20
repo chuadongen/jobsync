@@ -66,8 +66,3 @@ export function terminalStagesFor(
   }
   return [...byStatus.values()];
 }
-
-export function askedTally(stage: JobStage): { asked: number; total: number } {
-  const rows = stage.prepQuestions ?? [];
-  return { asked: rows.filter((r) => r.asked).length, total: rows.length };
-}

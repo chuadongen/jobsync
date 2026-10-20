@@ -1,23 +1,7 @@
-// Not a "use server" module: job/queries.ts and company/queries.ts both map
-// job rows through this, and exporting it from either would make it an action.
+// Not a "use server" module: exporting these from an actions file would make
+// them actions.
 
 import { promoteStage } from "@/actions/jobStage/shared";
-
-// persist.ts writes matchData with JSON.stringify, so this substring is exact.
-export const UNANALYZED_MATCH_MARKER = '"analyzed":false';
-
-// An automation job saved without LLM analysis carries only its keyword
-// pre-rank in matchScore, which the list must not show as an AI match. The
-// matchData body is dropped so the list payload stays small.
-export function hideUnanalyzedScore<
-  T extends { matchScore: number | null; matchData: string | null },
->({ matchData, ...job }: T) {
-  let analyzed = true;
-  try {
-    analyzed = JSON.parse(matchData ?? "{}").analyzed !== false;
-  } catch {}
-  return analyzed ? job : { ...job, matchScore: null };
-}
 
 type StatusStageTx = Parameters<typeof promoteStage>[0] & {
   jobStage: { findFirst: (args: any) => Promise<any>; create: (args: any) => Promise<any> };

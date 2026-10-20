@@ -16,8 +16,6 @@ type JobRefs = {
   companyId?: string | null;
   locationId?: string | null;
   jobSourceId?: string | null;
-  resumeId?: string | null;
-  coverLetterId?: string | null;
   tagIds?: string[];
 };
 
@@ -25,10 +23,9 @@ type JobRefs = {
 // referenced id is counted against the caller before it is attached.
 const assertJobRefsOwned = async (userId: string, refs: JobRefs) => {
   const owned = { createdBy: userId };
-  const inProfile = { profile: { userId } };
   const tagIds = [...new Set(refs.tagIds ?? [])];
 
-  const [title, company, location, source, resume, coverLetter, tags] =
+  const [title, company, location, source, tags] =
     await Promise.all([
       refs.jobTitleId
         ? prisma.jobTitle.count({ where: { id: refs.jobTitleId, ...owned } })
@@ -42,14 +39,6 @@ const assertJobRefsOwned = async (userId: string, refs: JobRefs) => {
       refs.jobSourceId
         ? prisma.jobSource.count({ where: { id: refs.jobSourceId, ...owned } })
         : 1,
-      refs.resumeId
-        ? prisma.resume.count({ where: { id: refs.resumeId, ...inProfile } })
-        : 1,
-      refs.coverLetterId
-        ? prisma.coverLetter.count({
-            where: { id: refs.coverLetterId, ...inProfile },
-          })
-        : 1,
       tagIds.length > 0
         ? prisma.tag.count({ where: { id: { in: tagIds }, ...owned } })
         : 0,
@@ -59,8 +48,6 @@ const assertJobRefsOwned = async (userId: string, refs: JobRefs) => {
   if (company === 0) throw new Error("Company not found");
   if (location === 0) throw new Error("Location not found");
   if (source === 0) throw new Error("Job source not found");
-  if (resume === 0) throw new Error("Resume not found");
-  if (coverLetter === 0) throw new Error("Cover letter not found");
   if (tags !== tagIds.length) throw new Error("Tag not found");
 };
 
@@ -83,8 +70,8 @@ export const addJob = async (
       dateApplied,
       jobDescription,
       jobUrl,
-      resume,
-      coverLetter,
+      startDate,
+      endDate,
       tags,
     } = data;
 
@@ -93,8 +80,6 @@ export const addJob = async (
       companyId: company,
       locationId: location,
       jobSourceId: source,
-      resumeId: resume,
-      coverLetterId: coverLetter,
       tagIds: tags,
     });
 
@@ -112,8 +97,8 @@ export const addJob = async (
       workplaceType,
       userId: user.id,
       jobUrl,
-      resumeId: resume,
-      coverLetterId: coverLetter,
+      startDate: startDate ?? null,
+      endDate: endDate ?? null,
       tagIds: tags ?? [],
     });
     revalidatePath("/dashboard");
@@ -147,8 +132,8 @@ export const updateJob = async (
       dateApplied,
       jobDescription,
       jobUrl,
-      resume,
-      coverLetter,
+      startDate,
+      endDate,
       tags,
     } = data;
 
@@ -161,8 +146,6 @@ export const updateJob = async (
         companyId: true,
         locationId: true,
         jobSourceId: true,
-        resumeId: true,
-        coverLetterId: true,
         statusId: true,
         tags: { select: { id: true } },
       },
@@ -181,8 +164,6 @@ export const updateJob = async (
       companyId: changed(company, current.companyId),
       locationId: changed(location, current.locationId),
       jobSourceId: changed(source, current.jobSourceId),
-      resumeId: changed(resume, current.resumeId),
-      coverLetterId: changed(coverLetter, current.coverLetterId),
       tagIds: tagIds.filter((tagId) => !currentTagIds.has(tagId)),
     });
 
@@ -228,8 +209,8 @@ export const updateJob = async (
           jobType: type,
           workplaceType,
           jobUrl,
-          resumeId: resume,
-          coverLetterId: coverLetter,
+          startDate: startDate ?? null,
+          endDate: endDate ?? null,
           tags: { set: tagIds.map((id) => ({ id })) },
           // Stamp today only on a move to Applied, never on an unrelated save.
           ...(status !== current.statusId &&

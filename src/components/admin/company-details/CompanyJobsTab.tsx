@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CircularScore } from "@/components/CircularScore";
 import { StatusBadge } from "@/components/StatusBadge";
 import { JobTabEmptyState } from "@/components/myjobs/job-details/JobTabEmptyState";
 import { getJobStatusBadgeColor } from "@/lib/badge-colors";
@@ -41,7 +40,6 @@ export function CompanyJobsTab({ jobs }: CompanyJobsTabProps) {
           <TableHead>Status</TableHead>
           <TableHead className="hidden md:table-cell">Location</TableHead>
           <TableHead className="hidden md:table-cell">Applied</TableHead>
-          <TableHead>Match</TableHead>
           <TableHead className="hidden md:table-cell">Source</TableHead>
         </TableRow>
       </TableHeader>
@@ -71,13 +69,6 @@ export function CompanyJobsTab({ jobs }: CompanyJobsTabProps) {
                 : job.applied
                   ? "Applied"
                   : "Not applied"}
-            </TableCell>
-            <TableCell>
-              {job.matchScore != null ? (
-                <CircularScore score={job.matchScore} size="sm" />
-              ) : (
-                "—"
-              )}
             </TableCell>
             <TableCell className="hidden md:table-cell">
               {job.JobSource?.label ?? "—"}

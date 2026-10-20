@@ -23,11 +23,10 @@ import type { SortState } from "@/models/sort.model";
 import { SortableTableHead } from "../SortableTableHead";
 import Link from "next/link";
 import { DeleteAlertDialog } from "../DeleteAlertDialog";
-import { CircularScore } from "@/components/CircularScore";
 import { JobStatusBadgeMenu } from "./JobStatusBadgeMenu";
 import { TooltipProvider } from "../ui/tooltip";
 import { JobActionsMenu } from "./JobActionsMenu";
-import { MatchJobButton } from "./MatchJobButton";
+import { ResumeStatusCell } from "./ResumeStatusCell";
 import { CompanyLogo } from "./CompanyLogo";
 
 type MyJobsTableProps = {
@@ -90,14 +89,9 @@ function MyJobsTable({
               Location
             </SortableTableHead>
             <TableHead>Status</TableHead>
-            <SortableTableHead
-              field="matchScore"
-              sort={sort}
-              onSort={onSort}
-              className="hidden md:table-cell text-center"
-            >
-              Match
-            </SortableTableHead>
+            <TableHead className="hidden md:table-cell text-center">
+              Resume
+            </TableHead>
             <SortableTableHead
               field="source"
               sort={sort}
@@ -184,16 +178,7 @@ function MyJobsTable({
                   />
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
-                  {job.matchScore != null ? (
-                    <CircularScore
-                      score={job.matchScore}
-                      size="sm"
-                      animate={false}
-                      className="mx-auto"
-                    />
-                  ) : (
-                    <MatchJobButton jobId={job.id} />
-                  )}
+                  <ResumeStatusCell job={job} />
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {job.JobSource?.label}

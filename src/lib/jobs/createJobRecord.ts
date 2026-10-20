@@ -48,8 +48,8 @@ export async function createJobRecord(fields: {
   userId: string;
   jobUrl?: string | null;
   applied?: boolean;
-  resumeId?: string | null;
-  coverLetterId?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
   tagIds?: string[];
   createdVia?: string | null;
   descriptionCompleteness?: string | null;

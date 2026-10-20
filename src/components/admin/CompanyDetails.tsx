@@ -27,13 +27,8 @@ type CompanyDetailsProps = {
   details: CompanyDetailsData;
 };
 
-function blockedDescription(total: number, dismissed: number) {
-  const jobs = `This company has ${total} associated job${total === 1 ? "" : "s"} (applied or not).`;
-  const hidden =
-    dismissed > 0
-      ? ` ${dismissed} of them ${dismissed === 1 ? "was" : "were"} dismissed by automations; pick Dismissed (discovered) on the Jobs page to see them.`
-      : "";
-  return `${jobs}${hidden} Remove or reassign them before deleting this company.`;
+function blockedDescription(total: number) {
+  return `This company has ${total} associated job${total === 1 ? "" : "s"} (applied or not). Remove or reassign them before deleting this company.`;
 }
 
 function CompanyDetails({ details }: CompanyDetailsProps) {
@@ -55,7 +50,7 @@ function CompanyDetails({ details }: CompanyDetailsProps) {
     deleteAction: false,
   });
 
-  const { jobs, dismissedJobsCount, currentContacts, formerContacts } = details;
+  const { jobs, currentContacts, formerContacts } = details;
   const contactsCount = new Set(
     [...currentContacts, ...formerContacts].map((contact) => contact.id),
   ).size;
@@ -82,16 +77,15 @@ function CompanyDetails({ details }: CompanyDetailsProps) {
     setEditOpen(true);
   };
 
-  // Jobs block up front, dismissed ones included, because the server guard
-  // counts them; contacts and resume entries are left to the server message.
+  // Jobs block up front; contacts are left to the server message.
   const onDelete = () => {
-    const total = jobs.length + dismissedJobsCount;
+    const total = jobs.length;
     if (total > 0) {
       setAlert({
         openState: true,
         deleteAction: false,
         title: "Associated jobs exist!",
-        description: blockedDescription(total, dismissedJobsCount),
+        description: blockedDescription(total),
       });
     } else {
       setAlert({ openState: true, deleteAction: true, itemId: details.id });

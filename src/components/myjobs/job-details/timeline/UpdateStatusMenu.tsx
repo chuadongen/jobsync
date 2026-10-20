@@ -1,5 +1,5 @@
 "use client";
-import { HelpCircle, Plus, Tags, Users } from "lucide-react";
+import { Plus, Tags, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,7 +26,6 @@ type UpdateStatusMenuProps = {
   onChangeStatus: (status: JobStatus) => void;
   onAddStage: () => void;
   onLinkInterviewers: () => void;
-  onAddPrepQuestions: () => void;
 };
 
 export function UpdateStatusMenu({
@@ -36,7 +35,6 @@ export function UpdateStatusMenu({
   onChangeStatus,
   onAddStage,
   onLinkInterviewers,
-  onAddPrepQuestions,
 }: UpdateStatusMenuProps) {
   // Disabled with a visible reason rather than hidden: an item that comes and
   // goes as you change tabs is harder to learn than one that greys out.
@@ -55,7 +53,6 @@ export function UpdateStatusMenu({
   }[] = [
     { key: "add", label: "Add Stage", icon: Plus, onSelect: onAddStage, reason: null },
     { key: "link", label: "Add Interviewers", icon: Users, onSelect: onLinkInterviewers, reason },
-    { key: "prep", label: "Add to Prep List", icon: HelpCircle, onSelect: onAddPrepQuestions, reason },
   ];
 
   return (

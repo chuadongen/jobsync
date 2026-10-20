@@ -106,26 +106,18 @@ export const updateJobStage = async (
     const existing = await assertStageOwned(values.id, user.id);
     const stageType = await resolveStageType(parsed, user.id);
 
-    // Interviewers and prep questions only have a UI on an interview stage, so
-    // retyping away from one would strand them: invisible, unremovable, and
-    // still enough to block deleting the question.
+    // Interviewers only have a UI on an interview stage, so retyping away
+    // from one would strand them: invisible and unremovable.
     if (
       existing.StageType.Status.value === "interview" &&
       !stageType.isInterview
     ) {
-      const [interviewers, prepQuestions] = await Promise.all([
-        prisma.jobStageInterviewer.count({ where: { stageId: values.id } }),
-        prisma.jobStagePrepQuestion.count({ where: { stageId: values.id } }),
-      ]);
-      if (interviewers + prepQuestions > 0) {
-        const parts = [
-          interviewers > 0 &&
-            `${interviewers} interviewer${interviewers === 1 ? "" : "s"}`,
-          prepQuestions > 0 &&
-            `${prepQuestions} prep question${prepQuestions === 1 ? "" : "s"}`,
-        ].filter(Boolean);
+      const interviewers = await prisma.jobStageInterviewer.count({
+        where: { stageId: values.id },
+      });
+      if (interviewers > 0) {
         throw new Error(
-          `"${existing.StageType.label}" still has ${parts.join(" and ")}. Remove them before changing it to a non-interview stage.`,
+          `"${existing.StageType.label}" still has ${interviewers} interviewer${interviewers === 1 ? "" : "s"}. Remove them before changing it to a non-interview stage.`,
         );
       }
     }

@@ -225,7 +225,7 @@ describe("Auth Actions", () => {
       });
     });
 
-    it("seeds the fourteen stage types after the statuses exist", async () => {
+    it("seeds the seventeen stage types after the statuses exist", async () => {
       (prisma.user.findUnique as any).mockResolvedValue(null);
       (bcrypt.hash as any).mockResolvedValue("hashed");
       (prisma.user.create as any).mockResolvedValue({ id: "new-user-id" });
@@ -237,7 +237,7 @@ describe("Auth Actions", () => {
       });
 
       const rows = (prisma.jobStageType.createMany as any).mock.calls[0][0].data;
-      expect(rows).toHaveLength(14);
+      expect(rows).toHaveLength(17);
       expect(rows.every((r: any) => r.createdBy === "new-user-id")).toBe(true);
       expect(rows.every((r: any) => typeof r.statusId === "string")).toBe(true);
       expect(rows.find((r: any) => r.value === "offer accepted")).toBeTruthy();

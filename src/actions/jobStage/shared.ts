@@ -3,8 +3,8 @@ import { APPLIED_STATUS_VALUES } from "@/lib/constants";
 
 export { sortStages } from "@/lib/jobs/sortStages";
 
-// Not a "use server" module: queries.ts, mutations.ts, interviewers.ts and
-// prep.ts all use these, and exporting them from any of those would make each
+// Not a "use server" module: queries.ts, mutations.ts and interviewers.ts
+// all use these, and exporting them from any of those would make each
 // one a callable server-action endpoint.
 
 export const STAGE_DETAIL_INCLUDE = {
@@ -23,12 +23,6 @@ export const STAGE_DETAIL_INCLUDE = {
           Company: { select: { id: true, label: true } },
         },
       },
-    },
-    orderBy: { createdAt: "asc" as const },
-  },
-  prepQuestions: {
-    include: {
-      Question: { select: { id: true, question: true, answer: true, tags: true } },
     },
     orderBy: { createdAt: "asc" as const },
   },
@@ -92,7 +86,7 @@ export async function assertStageOwned(
 export function assertInterviewStage(stage: StageOwnerRow): void {
   if (stage.StageType.Status.value !== "interview") {
     throw new Error(
-      `"${stage.StageType.label}" is not an interview stage, so it has no interviewers or prep list.`,
+      `"${stage.StageType.label}" is not an interview stage, so it has no interviewers.`,
     );
   }
 }

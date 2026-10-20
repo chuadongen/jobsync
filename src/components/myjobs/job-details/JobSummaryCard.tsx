@@ -1,16 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-import Link from "next/link";
-import { ExternalLink, FileText, Sparkles } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CircularScore } from "@/components/CircularScore";
 import { StatusBadge } from "@/components/StatusBadge";
-import { DownloadFileButton } from "@/components/profile/DownloadFileButton";
 import { BADGE_COLORS, getJobStatusBadgeColor } from "@/lib/badge-colors";
 import { cn, formatUrl } from "@/lib/utils";
-import type { JobMatchData } from "@/models/ai.schemas";
+import { ResumeStatusCell } from "../ResumeStatusCell";
 import {
   JobResponse,
   JobStatus,
@@ -21,13 +18,17 @@ import {
 type JobSummaryCardProps = {
   job: JobResponse;
   currentStatus: JobStatus;
-  matchData: JobMatchData | null;
 };
+
+function rolePeriod(start?: Date | null, end?: Date | null): string {
+  if (!start && !end) return "-";
+  const fmt = (d?: Date | null) => (d ? format(new Date(d), "PP") : "?");
+  return `${fmt(start)} – ${fmt(end)}`;
+}
 
 export function JobSummaryCard({
   job,
   currentStatus,
-  matchData,
 }: JobSummaryCardProps) {
   const expired =
     job.dueDate &&
@@ -78,41 +79,15 @@ export function JobSummaryCard({
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">AI Match</p>
-            {job.matchScore != null && matchData?.analyzed !== false ? (
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <CircularScore score={job.matchScore} size="sm" />
-                {matchData?.recommendation && (
-                  <Badge variant="outline" className="capitalize">
-                    {matchData.recommendation}
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <p className="mt-1 font-medium">Not matched</p>
-            )}
+            <p className="text-sm text-muted-foreground">Role Period</p>
+            <p className="mt-1 font-medium">
+              {rolePeriod(job.startDate, job.endDate)}
+            </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Resume</p>
             <div className="mt-1 font-medium">
-              {job.Resume?.File?.filePath ? (
-                DownloadFileButton(
-                  job.Resume.id!,
-                  job.Resume.File.filePath,
-                  job.Resume.title,
-                  job.Resume.File.fileName,
-                )
-              ) : job.Resume?.id ? (
-                <Link
-                  href={`/dashboard/profile/resume/${job.Resume.id}`}
-                  className="flex items-center gap-1 hover:underline"
-                >
-                  <FileText className="h-4 w-4" />
-                  {job.Resume.title}
-                </Link>
-              ) : (
-                <p>-</p>
-              )}
+              <ResumeStatusCell job={job} />
             </div>
           </div>
           <div>

@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { addCompany } from "@/actions/company.actions";
 import { createLocation, createJobSource } from "@/actions/job.actions";
 import { createJobTitle } from "@/actions/jobtitle.actions";
-import { createActivityType } from "@/actions/activity.actions";
 import { createContactRole } from "@/actions/contactRole.actions";
 import { toastError } from "@/lib/toast";
 import { useForm } from "react-hook-form";
@@ -29,9 +28,6 @@ vi.mock("@/actions/jobtitle.actions", () => ({
   createJobTitle: vi.fn(),
 }));
 
-vi.mock("@/actions/activity.actions", () => ({
-  createActivityType: vi.fn(),
-}));
 
 vi.mock("@/actions/contactRole.actions", () => ({
   createContactRole: vi.fn(),
@@ -167,20 +163,6 @@ describe("Combobox Enter key", () => {
         expect(createJobTitle).toHaveBeenCalledWith("Staff Engineer")
       );
       expect(addCompany).not.toHaveBeenCalled();
-    });
-
-    it("routes activityType to createActivityType", async () => {
-      vi.mocked(createActivityType).mockResolvedValue({ id: "a1" } as never);
-      const { user, input } = await openCombobox({
-        name: "activityType",
-        options: [],
-      });
-
-      await user.type(input, "Networking{Enter}");
-
-      await waitFor(() =>
-        expect(createActivityType).toHaveBeenCalledWith("Networking")
-      );
     });
 
     it("creates a contact role from the typed label", async () => {
@@ -436,7 +418,6 @@ describe("Combobox freeText", () => {
     expect(createJobTitle).not.toHaveBeenCalled();
     expect(createLocation).not.toHaveBeenCalled();
     expect(createJobSource).not.toHaveBeenCalled();
-    expect(createActivityType).not.toHaveBeenCalled();
   });
 
   it("stores the preset text when a suggestion is picked", async () => {

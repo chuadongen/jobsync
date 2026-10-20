@@ -20,15 +20,6 @@ export interface JobStageInterviewerLink {
   Contact: ContactSummary;
 }
 
-export interface JobStagePrepQuestionLink {
-  id: string;
-  stageId: string;
-  questionId: string;
-  asked: boolean;
-  askedAt: Date | null;
-  Question: { id: string; question: string; answer: string | null; tags: Tag[] };
-}
-
 export interface JobStage {
   id: string;
   jobId: string;
@@ -44,7 +35,6 @@ export interface JobStage {
   updatedAt: Date;
   StageType: JobStageTypeRef;
   interviewers: JobStageInterviewerLink[];
-  prepQuestions: JobStagePrepQuestionLink[];
 }
 
 const outcomeValues = STAGE_OUTCOMES.map((o) => o.value) as unknown as [

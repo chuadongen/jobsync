@@ -2,10 +2,9 @@
 
 import {
   ArrowLeft,
-  FileText,
+  ClipboardCopy,
   MoreVertical,
   Pencil,
-  Sparkles,
   StickyNote,
   Trash,
   Trash2,
@@ -31,11 +30,8 @@ import { CompanyLogo } from "../CompanyLogo";
 type JobDetailsHeaderProps = {
   job: JobResponse;
   updateStatusMenu?: React.ReactNode;
-  coverLetterBlockedReason?: string;
-  chatBusy: boolean;
   onBack: () => void;
-  onMatch: () => void;
-  onCoverLetter: () => void;
+  onCopyPrompt: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onAddNote: () => void;
@@ -44,11 +40,8 @@ type JobDetailsHeaderProps = {
 export function JobDetailsHeader({
   job,
   updateStatusMenu,
-  coverLetterBlockedReason,
-  chatBusy,
   onBack,
-  onMatch,
-  onCoverLetter,
+  onCopyPrompt,
   onEdit,
   onDelete,
   onAddNote,
@@ -92,26 +85,13 @@ export function JobDetailsHeader({
         <Button
           variant="outline"
           className="cursor-pointer"
-          disabled={chatBusy}
-          title={chatBusy ? "The assistant is busy" : undefined}
-          onClick={onMatch}
+          title="Copy a prompt that asks Claude to tailor a resume for this job"
+          onClick={onCopyPrompt}
+          data-testid="copy-claude-prompt-btn"
         >
-          <Sparkles className="h-4 w-4 sm:mr-2" />
+          <ClipboardCopy className="h-4 w-4 sm:mr-2" />
           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            AI Match
-          </span>
-        </Button>
-        <Button
-          variant="outline"
-          className="cursor-pointer"
-          data-testid="generate-cover-letter-btn"
-          disabled={!!coverLetterBlockedReason}
-          title={coverLetterBlockedReason}
-          onClick={onCoverLetter}
-        >
-          <FileText className="h-4 w-4 sm:mr-2" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-            {job.coverLetterId ? "Regenerate Letter" : "Cover Letter"}
+            Copy Claude Prompt
           </span>
         </Button>
         <Button

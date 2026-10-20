@@ -12,47 +12,29 @@ import { TipTapContentViewer } from "../TipTapContentViewer";
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTabQueryParam } from "@/hooks/useTabQueryParam";
-import { useAgentChat } from "@/components/agent/AgentChatProvider";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import { NotesSection } from "./NotesSection";
-import { useState, useMemo } from "react";
-import { MatchDetails } from "../automations/MatchDetails";
-import type { JobMatchData } from "@/models/ai.schemas";
+import { useState } from "react";
 import { DeleteAlertDialog } from "../DeleteAlertDialog";
 import { AddJob } from "./AddJob";
 import { deleteJobById, updateJobStatus } from "@/actions/job.actions";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { JobDetailsHeader } from "./job-details/JobDetailsHeader";
 import { JobSummaryCard } from "./job-details/JobSummaryCard";
-import { JobTabEmptyState } from "./job-details/JobTabEmptyState";
-import { CoverLetterTab } from "./job-details/CoverLetterTab";
-import { useAutoMatch } from "./job-details/useAutoMatch";
+import { JobApplicationTab } from "./job-details/JobApplicationTab";
 import { JobContactsTab } from "./job-details/JobContactsTab";
 import { JobTimelineTab } from "./job-details/timeline/JobTimelineTab";
 import { useJobStages } from "./job-details/timeline/useJobStages";
 import { UpdateStatusMenu } from "./job-details/timeline/UpdateStatusMenu";
 import { AddStageDialog } from "@/components/AddStageDialog";
 import { LinkInterviewersDialog } from "./job-details/timeline/LinkInterviewersDialog";
-import { AddPrepQuestionsDialog } from "./job-details/timeline/AddPrepQuestionsDialog";
 import type { JobStage, JobStageTypeRef } from "@/models/jobStage.model";
 
 const JOB_DETAIL_TABS = [
   "description",
   "timeline",
-  "match",
-  "letter",
+  "application",
   "contacts",
   "notes",
 ] as const;
@@ -78,15 +60,6 @@ function JobDetails({
   tags,
   stageTypes,
 }: JobDetailsProps) {
-  const {
-    open: openChat,
-    clear: clearChat,
-    sendMessage,
-    approvalPending,
-    busy: chatBusy,
-  } = useAgentChat();
-  const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
-  const [pendingChatMessage, setPendingChatMessage] = useState("");
   const [editJobTarget, setEditJobTarget] = useState<JobResponse | null>(
     null,
   );
@@ -111,7 +84,6 @@ function JobDetails({
     { mode: "create" } | { mode: "edit"; stage: JobStage } | null
   >(null);
   const [linkInterviewersOpen, setLinkInterviewersOpen] = useState(false);
-  const [prepQuestionsOpen, setPrepQuestionsOpen] = useState(false);
   const router = useRouter();
   const [activeTab, handleTabChange] = useTabQueryParam(
     JOB_DETAIL_TABS,
@@ -119,57 +91,21 @@ function JobDetails({
   );
   const goBack = () => router.back();
 
-  // Derived from the server prop, not local state: the chat saves the match
-  // server-side and fires router.refresh(), so mirrored state would go stale.
-  const parsedMatchData = useMemo(() => {
-    if (!job.matchData) return null;
-    try {
-      return JSON.parse(job.matchData) as JobMatchData;
-    } catch {
-      return null;
-    }
-  }, [job.matchData]);
-
   const jobLabel = `${job.JobTitle?.label ?? "this job"}${
     job.Company?.label ? ` at ${job.Company.label}` : ""
   }`;
 
-  // Panel first so a failed clear can never leave a button looking dead, and
-  // the message is sent either way — a conversation that would not clear is no
-  // reason to withhold it.
-  const startChat = async (text: string) => {
-    openChat();
+  // Tailoring runs in Claude on the user's own subscription, through the MCP
+  // server; the prompt carries the job id so Claude needs no lookup.
+  const onCopyPrompt = async () => {
+    const prompt = `Using my JobSync tools, tailor a resume for job ${job.id} (${jobLabel}). Pick the base version that fits the role best, use only what my experience bank backs up, and save it as a draft variant for my review.`;
     try {
-      await clearChat();
+      await navigator.clipboard.writeText(prompt);
+      toastSuccess("Prompt copied. Paste it into Claude.");
     } catch {
-      // Reported by the action itself; the message still goes out.
+      toastError("Could not copy the prompt to the clipboard.");
     }
-    void sendMessage({ parts: [{ type: "text", text }] });
   };
-
-  const requestChat = (text: string) => {
-    if (approvalPending) {
-      setPendingChatMessage(text);
-      setShowClearChatConfirm(true);
-      return;
-    }
-    void startChat(text);
-  };
-
-  const onMatch = () => requestChat(`Match my resume to ${jobLabel}`);
-  const onCoverLetter = () =>
-    requestChat(`Write a cover letter for ${jobLabel}`);
-
-  useAutoMatch(onMatch);
-
-  // Doubles as the busy gate: the header button, the empty state and
-  // Regenerate all key on this one reason.
-  const coverLetterBlockedReason =
-    job.descriptionCompleteness === "title-only"
-      ? "Add a job description first"
-      : chatBusy
-        ? "The assistant is busy"
-        : undefined;
 
   const onEditJob = () => {
     setEditJobTarget({ ...job, Status: currentStatus });
@@ -211,11 +147,8 @@ function JobDetails({
       <div className="py-6 space-y-6">
         <JobDetailsHeader
           job={job}
-          coverLetterBlockedReason={coverLetterBlockedReason}
-          chatBusy={chatBusy}
           onBack={goBack}
-          onMatch={onMatch}
-          onCoverLetter={onCoverLetter}
+          onCopyPrompt={onCopyPrompt}
           onEdit={onEditJob}
           onDelete={() => setDeleteAlertOpen(true)}
           onAddNote={onAddNote}
@@ -227,16 +160,11 @@ function JobDetails({
               onChangeStatus={onChangeStatus}
               onAddStage={() => setAddStageTarget({ mode: "create" })}
               onLinkInterviewers={() => setLinkInterviewersOpen(true)}
-              onAddPrepQuestions={() => setPrepQuestionsOpen(true)}
             />
           }
         />
 
-        <JobSummaryCard
-          job={job}
-          currentStatus={currentStatus}
-          matchData={parsedMatchData}
-        />
+        <JobSummaryCard job={job} currentStatus={currentStatus} />
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="w-full justify-start overflow-x-auto">
@@ -249,8 +177,7 @@ function JobDetails({
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="match">AI Match</TabsTrigger>
-            <TabsTrigger value="letter">Cover Letter</TabsTrigger>
+            <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="contacts">
               Contacts
               {contactLinks.length > 0 && (
@@ -273,23 +200,6 @@ function JobDetails({
               <TipTapContentViewer content={job?.description} />
             </Card>
           </TabsContent>
-          <TabsContent value="match" className="mt-4">
-            <Card className="p-6">
-              {parsedMatchData && parsedMatchData.analyzed !== false ? (
-                <MatchDetails matchData={parsedMatchData} />
-              ) : (
-                <JobTabEmptyState
-                  icon={Sparkles}
-                  title="No match analysis yet"
-                  description="Run an AI match to see how your resume lines up with this posting, and where the gaps are."
-                  actionLabel="Match with AI"
-                  onAction={onMatch}
-                  actionDisabled={chatBusy}
-                  actionTitle={chatBusy ? "The assistant is busy" : undefined}
-                />
-              )}
-            </Card>
-          </TabsContent>
           <TabsContent value="timeline" className="mt-4">
             <JobTimelineTab
               stages={stages}
@@ -300,17 +210,12 @@ function JobDetails({
               onAddStage={() => setAddStageTarget({ mode: "create" })}
               onEditStage={(stage) => setAddStageTarget({ mode: "edit", stage })}
               onLinkInterviewers={() => setLinkInterviewersOpen(true)}
-              onAddPrepQuestions={() => setPrepQuestionsOpen(true)}
               onChanged={reloadStages}
             />
           </TabsContent>
-          <TabsContent value="letter" className="mt-4">
+          <TabsContent value="application" className="mt-4">
             <Card className="p-6">
-              <CoverLetterTab
-                letter={job.CoverLetter}
-                blockedReason={coverLetterBlockedReason}
-                onGenerate={onCoverLetter}
-              />
+              <JobApplicationTab job={job} onCopyPrompt={onCopyPrompt} />
             </Card>
           </TabsContent>
           {/* forceMount keeps ⋮ → Add a Note and the count badge working off-tab. */}
@@ -376,39 +281,12 @@ function JobDetails({
           router.refresh();
         }}
       />
-      <AddPrepQuestionsDialog
-        open={prepQuestionsOpen}
-        stage={selectedStage ?? currentStage}
-        onOpenChange={setPrepQuestionsOpen}
-        onAdded={() => void reloadStages()}
-      />
       <DeleteAlertDialog
         pageTitle="job"
         open={deleteAlertOpen}
         onOpenChange={setDeleteAlertOpen}
         onDelete={onDeleteJob}
       />
-      {/* CLEAR CHAT BEFORE AN AI ACTION CONFIRM */}
-      <AlertDialog
-        open={showClearChatConfirm}
-        onOpenChange={setShowClearChatConfirm}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear the assistant conversation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A job is waiting for your approval in the assistant. Starting this
-              clears the conversation, and that job will not be saved.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void startChat(pendingChatMessage)}>
-              Clear and continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

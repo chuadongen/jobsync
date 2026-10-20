@@ -11,8 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { SIDEBAR_LINKS } from "@/lib/constants";
 import SidebarToggle from "./SidebarToggle";
-import { AgentChatTrigger } from "./AgentChatTrigger";
-import { NotificationBell } from "./notifications/NotificationBell";
 
 async function Header() {
   return (
@@ -58,7 +56,7 @@ async function Header() {
       </Sheet>
       <SidebarToggle />
       <h1 className="font-semibold">
-        JobSync<span className="hidden sm:inline"> - Job Search Assistant</span>
+        JobSync<span className="hidden sm:inline"> - Applications &amp; Resumes</span>
       </h1>
       <div className="relative ml-auto flex-1 md:grow-0">
         {/* <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -69,9 +67,6 @@ async function Header() {
           className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
         /> */}
       </div>
-
-      <NotificationBell />
-      <AgentChatTrigger />
     </header>
   );
 }

@@ -2,7 +2,7 @@ import MarkdownIt from "markdown-it";
 import { addDays } from "date-fns";
 import prisma from "@/lib/db";
 import { APP_CONSTANTS } from "@/lib/constants";
-import { normalizeJobUrl } from "@/lib/scraper/utils";
+import { normalizeJobUrl } from "@/lib/jobs/jobUrl";
 import { findExistingJobByUrl } from "@/lib/jobs/jobDedupe";
 import { createJobRecord } from "@/lib/jobs/createJobRecord";
 import { classifyDescriptionCompleteness } from "@/lib/jobs/descriptionCompleteness";

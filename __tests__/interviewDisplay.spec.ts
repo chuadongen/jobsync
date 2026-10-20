@@ -6,7 +6,6 @@ import {
   durationLabel,
   whenParts,
   interviewerSummary,
-  prepSummary,
 } from "@/components/interviews/interviewDisplay";
 
 const now = new Date("2026-09-21T12:00:00Z");
@@ -118,13 +117,3 @@ describe("interviewerSummary", () => {
   });
 });
 
-describe("prepSummary", () => {
-  it("shows asked over total once anything has been asked", () => {
-    expect(prepSummary([{ asked: true }, { asked: false }])).toBe("1 / 2");
-  });
-
-  it("shows the plain total when nothing has been asked", () => {
-    expect(prepSummary([{ asked: false }, { asked: false }])).toBe("2");
-    expect(prepSummary([])).toBe("0");
-  });
-});

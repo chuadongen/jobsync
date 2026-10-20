@@ -1,5 +1,5 @@
 import { getExistingJobDedupeMap, findExistingJobByUrl } from "@/lib/jobs/jobDedupe";
-import { jobDedupeKey } from "@/lib/scraper/utils";
+import { jobDedupeKey } from "@/lib/jobs/jobUrl";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

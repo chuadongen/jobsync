@@ -65,9 +65,6 @@ const makeDetails = (overrides: Record<string, unknown> = {}) =>
     createdBy: "u1",
     watched: false,
     watchedAt: null,
-    atsProvider: null,
-    atsToken: null,
-    atsHost: null,
     websiteUrl: null,
     careersUrl: null,
     industry: null,
@@ -76,7 +73,6 @@ const makeDetails = (overrides: Record<string, unknown> = {}) =>
     notes: null,
     jobs: [],
     appliedCount: 0,
-    dismissedJobsCount: 0,
     currentContacts: [],
     formerContacts: [],
     ...overrides,
@@ -182,20 +178,6 @@ describe("CompanyDetails – header", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("builds the job board link from the board coordinates", async () => {
-    render(
-      <CompanyDetails
-        details={makeDetails({ atsProvider: "greenhouse", atsToken: "stripe" })}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /more links/i }));
-
-    expect(
-      screen.getByRole("menuitem", { name: /open job board/i }).getAttribute("href"),
-    ).toMatch(/\/stripe$/);
-  });
-
   it("hides the links menu when there is nothing to open", () => {
     render(<CompanyDetails details={makeDetails()} />);
 
@@ -225,7 +207,6 @@ describe("CompanyDetails – summary card", () => {
     render(<CompanyDetails details={makeDetails()} />);
 
     expect(fact("Watchlist")).toHaveTextContent("Not watched");
-    expect(fact("Board")).toHaveTextContent("—");
     expect(fact("Industry")).toHaveTextContent("—");
     expect(fact("Website")).toHaveTextContent("—");
     expect(fact("Careers page")).toHaveTextContent("—");
@@ -287,7 +268,6 @@ describe("CompanyDetails – delete", () => {
     id: "j1",
     applied: false,
     appliedDate: null,
-    matchScore: null,
     createdAt: new Date(),
     JobTitle: { label: "Backend Engineer" },
     Status: { label: "Draft", value: "draft" },
@@ -302,15 +282,6 @@ describe("CompanyDetails – delete", () => {
 
     expect(await screen.findByText("Associated jobs exist!")).toBeInTheDocument();
     expect(deleteCompanyById).not.toHaveBeenCalled();
-  });
-
-  it("still blocks when every job was dismissed, and says so", async () => {
-    render(<CompanyDetails details={makeDetails({ dismissedJobsCount: 3 })} />);
-
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
-
-    expect(await screen.findByText("Associated jobs exist!")).toBeInTheDocument();
-    expect(screen.getByText(/3 of them were dismissed by automations/)).toBeInTheDocument();
   });
 
   it("deletes a company with no jobs and returns to the Library", async () => {
@@ -359,7 +330,6 @@ describe("CompanyDetails – Jobs tab", () => {
     createdAt: new Date("2026-09-01"),
     applied: true,
     appliedDate: new Date("2026-09-02"),
-    matchScore: 82,
     JobTitle: { label: "Backend Engineer" },
     Status: { label: "Applied", value: "applied" },
     Location: { label: "Remote" },
@@ -383,17 +353,16 @@ describe("CompanyDetails – Jobs tab", () => {
     ).toHaveAttribute("href", "/dashboard/myjobs/j1");
   });
 
-  it("shows status, location, source and the match score", () => {
+  it("shows status, location and source", () => {
     render(<CompanyDetails details={makeDetails({ jobs: [job()] })} />);
 
     const row = screen.getByRole("row", { name: /backend engineer/i });
     expect(within(row).getByText("Applied")).toBeInTheDocument();
     expect(within(row).getByText("Remote")).toBeInTheDocument();
     expect(within(row).getByText("LinkedIn")).toBeInTheDocument();
-    expect(within(row).getByTestId("circular-score")).toHaveTextContent("82%");
   });
 
-  it("shows Not applied and a dash for an unapplied, unmatched job", () => {
+  it("shows Not applied for an unapplied job", () => {
     render(
       <CompanyDetails
         details={makeDetails({
@@ -401,7 +370,6 @@ describe("CompanyDetails – Jobs tab", () => {
             job({
               applied: false,
               appliedDate: null,
-              matchScore: null,
               JobSource: null,
             }),
           ],
@@ -411,7 +379,6 @@ describe("CompanyDetails – Jobs tab", () => {
 
     const row = screen.getByRole("row", { name: /backend engineer/i });
     expect(within(row).getByText("Not applied")).toBeInTheDocument();
-    expect(within(row).queryByTestId("circular-score")).not.toBeInTheDocument();
   });
 
   it("shows an empty state with no action when there are no jobs", () => {

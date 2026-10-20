@@ -2,7 +2,6 @@ import CompaniesContainer from "@/components/admin/CompaniesContainer";
 import { screen, render, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getCompanyList, getCompanyById } from "@/actions/company.actions";
-import { searchAtsCompanies } from "@/actions/atsCompany.actions";
 
 const mockPush = vi.fn();
 let mockParams = new URLSearchParams("");
@@ -19,18 +18,7 @@ vi.mock("@/actions/company.actions", () => ({
   deleteCompanyById: vi.fn(),
   addCompany: vi.fn(),
   updateCompany: vi.fn(),
-  watchBoardCompany: vi.fn(),
   setCompanyWatched: vi.fn(),
-  getWatchedBoards: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock("@/actions/atsCompany.actions", () => ({
-  searchAtsCompanies: vi.fn().mockResolvedValue({
-    companies: [{ name: "Anthropic", token: "anthropic" }],
-    hasMore: false,
-  }),
-  getAtsCompanyCount: vi.fn().mockResolvedValue(1860),
-  resolveAtsBoard: vi.fn(),
 }));
 
 // A real next/link builds its own IntersectionObserver for prefetching, which
@@ -395,16 +383,6 @@ describe("CompaniesContainer Search Functionality", () => {
   });
 
   describe("Scope", () => {
-    it("reads the scope from the URL and browses the seed instead of the database", async () => {
-      mockParams = new URLSearchParams("scope=board:ashby");
-      (getCompanyList as any).mockResolvedValue({ data: [], total: 0 });
-
-      render(<CompaniesContainer />);
-
-      expect(await screen.findByText("Anthropic")).toBeInTheDocument();
-      expect(searchAtsCompanies).toHaveBeenCalledWith("ashby", "", 0);
-      expect(getCompanyList).not.toHaveBeenCalled();
-    });
 
     it("passes the watchlist scope through to getCompanyList", async () => {
       mockParams = new URLSearchParams("scope=watchlist");

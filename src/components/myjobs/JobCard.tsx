@@ -12,7 +12,6 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { CircularScore } from "@/components/CircularScore";
 import {
   JobResponse,
   JobStatus,
@@ -21,7 +20,7 @@ import {
 } from "@/models/job.model";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { JobActionsMenu } from "./JobActionsMenu";
-import { MatchJobButton } from "./MatchJobButton";
+import { ResumeStatusCell } from "./ResumeStatusCell";
 import { CompanyLogo } from "./CompanyLogo";
 
 type JobCardProps = {
@@ -81,11 +80,7 @@ export function JobCard({
             </p>
           )}
         </div>
-        {job.matchScore != null ? (
-          <CircularScore score={job.matchScore} size="sm" animate={false} />
-        ) : (
-          <MatchJobButton jobId={job.id} />
-        )}
+        <ResumeStatusCell job={job} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

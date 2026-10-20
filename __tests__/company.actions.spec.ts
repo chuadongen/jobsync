@@ -24,9 +24,6 @@ vi.mock("@prisma/client", () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
-    workExperience: {
-      count: vi.fn(),
-    },
     contact: {
       count: vi.fn(),
     },
@@ -132,9 +129,6 @@ describe("Company Actions", () => {
           logoUrl: true,
           watched: true,
           watchedAt: true,
-          atsProvider: true,
-          atsToken: true,
-          atsHost: true,
           _count: {
             select: {
               jobsApplied: {
@@ -192,7 +186,6 @@ describe("Company Actions", () => {
           createdBy: mockUser.id,
           OR: [
             { label: { contains: "Ama" } },
-            { atsToken: { contains: "Ama" } },
           ],
         },
         skip: 0,
@@ -204,7 +197,6 @@ describe("Company Actions", () => {
           createdBy: mockUser.id,
           OR: [
             { label: { contains: "Ama" } },
-            { atsToken: { contains: "Ama" } },
           ],
         },
       });
@@ -238,7 +230,6 @@ describe("Company Actions", () => {
           createdBy: mockUser.id,
           OR: [
             { label: { contains: "Ama" } },
-            { atsToken: { contains: "Ama" } },
           ],
         },
         skip: 0,
@@ -250,9 +241,6 @@ describe("Company Actions", () => {
           logoUrl: true,
           watched: true,
           watchedAt: true,
-          atsProvider: true,
-          atsToken: true,
-          atsHost: true,
           _count: {
             select: {
               jobsApplied: {
@@ -275,7 +263,6 @@ describe("Company Actions", () => {
           createdBy: mockUser.id,
           OR: [
             { label: { contains: "Ama" } },
-            { atsToken: { contains: "Ama" } },
           ],
         },
       });
@@ -929,7 +916,6 @@ describe("Company Actions", () => {
 
     it("should delete a company successfully", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       const mockDeleted = { id: "company-id", label: "Test Company" };
       (prisma.company.delete as any).mockResolvedValue(mockDeleted);
@@ -942,25 +928,6 @@ describe("Company Actions", () => {
       });
     });
 
-    it("counts only the current user's work experience rows", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.job.count as any).mockResolvedValue(0);
-      (prisma.company.delete as any).mockResolvedValue({ id: "c1" });
-
-      await deleteCompanyById("c1");
-
-      expect(prisma.workExperience.count).toHaveBeenCalledWith({
-        where: {
-          companyId: "c1",
-          OR: [
-            { ResumeSection: { Resume: { profile: { userId: mockUser.id } } } },
-            { resumeSectionId: null },
-          ],
-        },
-      });
-    });
-
     it("should return error for unauthenticated user", async () => {
       (getCurrentUser as any).mockResolvedValue(null);
 
@@ -970,24 +937,8 @@ describe("Company Actions", () => {
       expect(prisma.company.delete).not.toHaveBeenCalled();
     });
 
-    it("should prevent deletion when work experiences exist", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(1);
-
-      const result = await deleteCompanyById("company-id");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Company cannot be deleted due to its use in experience section of one of the resume! ",
-      });
-      expect(prisma.job.count).not.toHaveBeenCalled();
-      expect(prisma.company.delete).not.toHaveBeenCalled();
-    });
-
     it("should prevent deletion when associated jobs exist", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(3);
 
       const result = await deleteCompanyById("company-id");
@@ -1002,7 +953,6 @@ describe("Company Actions", () => {
 
     it("refuses to delete a company that a contact points at, either way", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       (prisma.contact.count as any).mockResolvedValue(2);
 
@@ -1021,7 +971,6 @@ describe("Company Actions", () => {
 
     it("should handle unexpected errors", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       (prisma.company.delete as any).mockRejectedValue(
         new Error("Delete failed"),

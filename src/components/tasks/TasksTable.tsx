@@ -12,7 +12,6 @@ import {
   Pencil,
   Tags,
   Trash,
-  CirclePlay,
   Check,
   ArrowDown,
   ArrowRight,
@@ -66,7 +65,6 @@ type TasksTableProps = {
   deleteTask: (id: string) => void;
   editTask: (id: string) => void;
   onChangeTaskStatus: (id: string, status: TaskStatus) => void;
-  onStartActivity: (id: string) => void;
   groupBy?: TaskGroupBy;
 };
 
@@ -144,20 +142,6 @@ function groupTasksByDate(tasks: Task[]): Record<DateGroup, Task[]> {
   return groups;
 }
 
-function groupTasksByActivityType(tasks: Task[]): Record<string, Task[]> {
-  const groups: Record<string, Task[]> = {};
-
-  tasks.forEach((task) => {
-    const key = task.activityType?.label || "No Activity Type";
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(task);
-  });
-
-  return groups;
-}
-
 function groupTasksByCreatedDate(
   tasks: Task[],
 ): Record<CreatedDateGroup, Task[]> {
@@ -197,7 +181,6 @@ function TasksTable({
   deleteTask,
   editTask,
   onChangeTaskStatus,
-  onStartActivity,
   groupBy = "none",
 }: TasksTableProps) {
   const [alertOpen, setAlertOpen] = useState(false);
@@ -268,9 +251,6 @@ function TasksTable({
             </Tooltip>
           )}
         </span>
-      </TableCell>
-      <TableCell className="py-1 px-2">
-        {task.activityType?.label || "—"}
       </TableCell>
       <TableCell className="hidden md:table-cell py-1 px-2">
         <StatusBadge
@@ -348,14 +328,6 @@ function TasksTable({
               </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer text-green-600"
-                onClick={() => onStartActivity(task.id)}
-              >
-                <CirclePlay className="mr-2 h-4 w-4" />
-                Start Activity
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
                 className="text-red-600 cursor-pointer"
                 onClick={() => onDeleteTask(task.id)}
               >
@@ -365,21 +337,6 @@ function TasksTable({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableCell>
-      <TableCell className="hidden sm:table-cell py-1 px-1">
-        <Button
-          title="Start Activity"
-          aria-haspopup="true"
-          size="icon"
-          variant="ghost"
-          onClick={() => onStartActivity(task.id)}
-          data-testid="task-start-activity-btn"
-          className="opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-300"
-        >
-          <span>
-            <CirclePlay className="text-green-600" />
-          </span>
-        </Button>
       </TableCell>
     </TableRow>
   );
@@ -391,7 +348,6 @@ function TasksTable({
           <span className="sr-only">Complete</span>
         </TableHead>
         <TableHead className="h-9 px-2">Title</TableHead>
-        <TableHead className="h-9 px-2">Activity Type</TableHead>
         <TableHead className="hidden md:table-cell h-9 px-2">Status</TableHead>
         <TableHead className="hidden md:table-cell h-9 px-2 text-center">
           Priority
@@ -401,9 +357,6 @@ function TasksTable({
         </TableHead>
         <TableHead className="h-9 px-1">
           <span className="sr-only">Actions</span>
-        </TableHead>
-        <TableHead className="hidden sm:table-cell h-9 px-1">
-          <span className="sr-only">Start Activity</span>
         </TableHead>
       </TableRow>
     </TableHeader>
@@ -460,10 +413,6 @@ function TasksTable({
         .filter((group) => groupedTasks[group].length > 0)
         .map((group) => [group, groupedTasks[group]]),
     );
-  }
-
-  if (groupBy === "activityType") {
-    return renderGroupedTables(Object.entries(groupTasksByActivityType(tasks)));
   }
 
   if (groupBy === "createdDate" || groupBy === "updatedDate") {

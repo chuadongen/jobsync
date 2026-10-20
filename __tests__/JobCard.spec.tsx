@@ -6,11 +6,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-const chat = { busy: false };
-vi.mock("@/components/agent/AgentChatProvider", () => ({
-  useAgentChat: () => chat,
-}));
-
 const mockStatuses: JobStatus[] = [
   { id: "1", label: "Applied", value: "applied" },
   { id: "2", label: "Interview", value: "interview" },
@@ -76,23 +71,20 @@ describe("JobCard", () => {
     expect(screen.queryByText("Not applied")).not.toBeInTheDocument();
   });
 
-  it("renders the match score, or a Match button when there is none", () => {
-    const { unmount } = renderCard(makeJob({ matchScore: 87 }));
-    expect(screen.getByText("87%")).toBeInTheDocument();
+  it("shows the furthest-along resume status, or a dash with none", () => {
+    const { unmount } = renderCard(
+      makeJob({
+        resumeDocs: [
+          { id: "r1", name: "Draft one", status: "draft" },
+          { id: "r2", name: "Sent one", status: "submitted" },
+        ],
+      }),
+    );
+    expect(screen.getByText("Submitted")).toBeInTheDocument();
     unmount();
 
-    renderCard(makeJob({ matchScore: null }));
-    expect(screen.getByRole("link", { name: /match/i })).toHaveAttribute(
-      "href",
-      "/dashboard/myjobs/job-1?tab=match&match=1",
-    );
-  });
-
-  it("shows a Dismissed badge for dismissed discovered jobs", () => {
-    renderCard(makeJob({ discoveryStatus: "dismissed" }));
-
-    expect(screen.getByText("Dismissed")).toBeInTheDocument();
-    expect(screen.queryByText("Applied")).not.toBeInTheDocument();
+    renderCard(makeJob({ resumeDocs: [] }));
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   it("shows an Expired badge for past-due draft jobs", () => {

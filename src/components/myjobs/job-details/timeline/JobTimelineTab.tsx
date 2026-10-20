@@ -15,7 +15,6 @@ type JobTimelineTabProps = {
   onAddStage: () => void;
   onEditStage: (stage: JobStage) => void;
   onLinkInterviewers: () => void;
-  onAddPrepQuestions: () => void;
   onChanged: () => void;
 };
 
@@ -28,7 +27,6 @@ export function JobTimelineTab({
   onAddStage,
   onEditStage,
   onLinkInterviewers,
-  onAddPrepQuestions,
   onChanged,
 }: JobTimelineTabProps) {
   // A job restored from a pre-feature backup is permanently stageless, so
@@ -68,7 +66,6 @@ export function JobTimelineTab({
             isCurrent={selected.id === currentStageId}
             onEdit={() => onEditStage(selected)}
             onLinkInterviewers={onLinkInterviewers}
-            onAddPrepQuestions={onAddPrepQuestions}
             onChanged={onChanged}
           />
         )}

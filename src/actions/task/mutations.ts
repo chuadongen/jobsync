@@ -6,10 +6,6 @@ import { AddTaskFormSchema } from "@/models/addTaskForm.schema";
 import { z } from "zod";
 import { requireUser } from "../shared";
 
-const WITH_ACTIVITY_TYPE = {
-  activityType: true,
-};
-
 export const createTask = async (
   data: z.infer<typeof AddTaskFormSchema>
 ): Promise<any | undefined> => {
@@ -26,10 +22,8 @@ export const createTask = async (
         priority: validatedData.priority,
         percentComplete: validatedData.percentComplete,
         dueDate: validatedData.dueDate,
-        activityTypeId: validatedData.activityTypeId,
         userId: user.id,
       },
-      include: WITH_ACTIVITY_TYPE,
     });
 
     return { success: true, data: task };
@@ -63,9 +57,7 @@ export const updateTask = async (
         priority: validatedData.priority,
         percentComplete: validatedData.percentComplete,
         dueDate: validatedData.dueDate,
-        activityTypeId: validatedData.activityTypeId,
       },
-      include: WITH_ACTIVITY_TYPE,
     });
 
     return { success: true, data: task };
@@ -90,7 +82,6 @@ export const updateTaskStatus = async (
       data: {
         status,
       },
-      include: WITH_ACTIVITY_TYPE,
     });
 
     return { success: true, data: task };
@@ -111,23 +102,10 @@ export const deleteTaskById = async (
         id: taskId,
         userId: user.id,
       },
-      include: {
-        activities: {
-          select: { id: true },
-        },
-      },
     });
 
     if (!task) {
       return { success: false, message: "Task not found" };
-    }
-
-    if (task.activities.length > 0) {
-      return {
-        success: false,
-        message:
-          "Cannot delete task with linked activity. Remove the activity first.",
-      };
     }
 
     await prisma.task.delete({

@@ -5,13 +5,6 @@ import { TaskGroupBy, TaskStatus } from "@/models/task.model";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { requireUser } from "../shared";
 
-const TASK_WITH_ACTIVITIES_INCLUDE = {
-  activityType: true,
-  activities: {
-    select: { id: true },
-  },
-};
-
 function getTasksOrderBy(groupBy?: TaskGroupBy) {
   switch (groupBy) {
     case "dueDate":
@@ -28,12 +21,6 @@ function getTasksOrderBy(groupBy?: TaskGroupBy) {
         { priority: "desc" as const },
         { createdAt: "desc" as const },
       ];
-    case "activityType":
-      return [
-        { activityType: { label: "asc" as const } },
-        { priority: "desc" as const },
-        { createdAt: "desc" as const },
-      ];
     default:
       return [
         { priority: "desc" as const },
@@ -46,7 +33,6 @@ function getTasksOrderBy(groupBy?: TaskGroupBy) {
 export const getTasksList = async (
   page: number = 1,
   limit: number = APP_CONSTANTS.RECORDS_PER_PAGE,
-  filter?: string,
   statusFilter?: TaskStatus[],
   search?: string,
   groupBy?: TaskGroupBy
@@ -60,10 +46,6 @@ export const getTasksList = async (
       userId: user.id,
     };
 
-    if (filter) {
-      whereClause.activityTypeId = filter;
-    }
-
     if (statusFilter && statusFilter.length > 0) {
       whereClause.status = { in: statusFilter };
     }
@@ -72,14 +54,12 @@ export const getTasksList = async (
       whereClause.OR = [
         { title: { contains: search } },
         { description: { contains: search } },
-        { activityType: { label: { contains: search } } },
       ];
     }
 
     const [data, total] = await Promise.all([
       prisma.task.findMany({
         where: whereClause,
-        include: TASK_WITH_ACTIVITIES_INCLUDE,
         orderBy: getTasksOrderBy(groupBy),
         skip: offset,
         take: limit,
@@ -111,7 +91,6 @@ export const getTaskById = async (
         id: taskId,
         userId: user.id,
       },
-      include: TASK_WITH_ACTIVITIES_INCLUDE,
     });
 
     if (!task) {
@@ -124,54 +103,6 @@ export const getTaskById = async (
     };
   } catch (error) {
     const msg = "Failed to fetch task.";
-    return handleError(error, msg);
-  }
-};
-
-export const getActivityTypesWithTaskCounts = async (): Promise<
-  any | undefined
-> => {
-  try {
-    const user = await requireUser();
-
-    const excludedStatuses = ["complete", "cancelled"];
-
-    const activityTypes = await prisma.activityType.findMany({
-      where: {
-        createdBy: user.id,
-      },
-      include: {
-        _count: {
-          select: {
-            Tasks: {
-              where: {
-                status: { notIn: excludedStatuses },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const data = activityTypes
-      .map((type) => ({
-        id: type.id,
-        label: type.label,
-        value: type.value,
-        taskCount: type._count.Tasks,
-      }))
-      .sort((a, b) => b.taskCount - a.taskCount);
-
-    const totalTasks = await prisma.task.count({
-      where: {
-        userId: user.id,
-        status: { notIn: excludedStatuses },
-      },
-    });
-
-    return { success: true, data, totalTasks };
-  } catch (error) {
-    const msg = "Failed to fetch activity types with task counts.";
     return handleError(error, msg);
   }
 };

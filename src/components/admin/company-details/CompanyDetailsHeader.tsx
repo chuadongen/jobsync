@@ -18,10 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CompanyLogo } from "@/components/myjobs/CompanyLogo";
-import { companyBoardUrl } from "@/lib/atsBoardUrl";
 import { formatUrl } from "@/lib/utils";
 import type { Company } from "@/models/job.model";
-import type { LeverHost } from "@/models/automation.model";
 import { hostnameOf } from "./hostname";
 
 type CompanyDetailsHeaderProps = {
@@ -43,18 +41,10 @@ export function CompanyDetailsHeader({
     .filter(Boolean)
     .join(" · ");
 
-  const boardUrl =
-    company.atsProvider && company.atsToken
-      ? companyBoardUrl(company.atsProvider, {
-          token: company.atsToken,
-          host: (company.atsHost as LeverHost) ?? undefined,
-        })
-      : null;
   const links = [
     { label: "Open website", href: company.websiteUrl ? formatUrl(company.websiteUrl) : null },
     { label: "Open careers page", href: company.careersUrl ? formatUrl(company.careersUrl) : null },
     { label: "Open LinkedIn", href: company.linkedinUrl ? formatUrl(company.linkedinUrl) : null },
-    { label: "Open job board", href: boardUrl },
   ].filter((link): link is { label: string; href: string } => !!link.href);
 
   return (
