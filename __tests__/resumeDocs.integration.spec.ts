@@ -1,9 +1,9 @@
 // @vitest-environment node
 import fs from "fs";
 import path from "path";
-import { migrate, useTempDatabase } from "./helpers/testDb";
+import { migrate, setupTempDatabase } from "./helpers/testDb";
 
-const tmp = useTempDatabase();
+const tmp = setupTempDatabase();
 
 // Imported after the env is pointed at the temp database.
 const { default: prisma } = await import("@/lib/db");

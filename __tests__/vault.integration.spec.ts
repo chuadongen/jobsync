@@ -2,9 +2,9 @@
 import fs from "fs";
 import path from "path";
 import JSZip from "jszip";
-import { migrate, useTempDatabase } from "./helpers/testDb";
+import { migrate, setupTempDatabase } from "./helpers/testDb";
 
-const tmp = useTempDatabase();
+const tmp = setupTempDatabase();
 
 const { default: prisma } = await import("@/lib/db");
 const documents = await import("@/lib/files/documents");

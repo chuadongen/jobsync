@@ -6,7 +6,7 @@ import path from "path";
 // ownership, provenance and lifecycle rules are easy to fake past with mocks.
 // Call before importing anything that touches @/lib/db, so the client binds
 // to the temp file.
-export function useTempDatabase() {
+export function setupTempDatabase() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "jobsync-test-"));
   const file = path.join(dir, "test.db");
   process.env.DATABASE_URL = `file:${file}`;
