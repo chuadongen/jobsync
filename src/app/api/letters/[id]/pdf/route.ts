@@ -6,6 +6,7 @@ import { renderCoverLetterPdf } from "@/lib/resume/pdf";
 import { readDataFile } from "@/lib/files/storage";
 import { isExportable } from "@/models/resume.model";
 import { pdfResponse } from "@/lib/files/responses";
+import { outgoingName } from "@/lib/resume/naming";
 
 export async function GET(
   _req: Request,
@@ -26,14 +27,15 @@ export async function GET(
     );
   }
 
+  const header = await getResumeHeader(userId);
+  const title = outgoingName(header?.fullName, "Cover Letter");
   if (letter.status === "submitted" && letter.pdfPath) {
     try {
-      return pdfResponse(await readDataFile(letter.pdfPath), letter.title);
+      return pdfResponse(await readDataFile(letter.pdfPath), title);
     } catch {
       // Moved or removed by hand: fall through and re-render.
     }
   }
-  const header = await getResumeHeader(userId);
   if (!header) {
     return NextResponse.json(
       { error: "Add your contact details in the Experience Bank first." },
@@ -41,7 +43,7 @@ export async function GET(
     );
   }
   return pdfResponse(
-    await renderCoverLetterPdf(header, letter.content, letter.title),
-    letter.title,
+    await renderCoverLetterPdf(header, letter.content, title),
+    title,
   );
 }

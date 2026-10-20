@@ -133,7 +133,7 @@ function TokenRevealDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Token Created — Save It Now</DialogTitle>
           <DialogDescription>

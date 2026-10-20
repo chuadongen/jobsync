@@ -251,7 +251,7 @@ describe("resume documents", () => {
     const submitted = await submitResume(userId, variant!.id);
     expect(submitted!.status).toBe("submitted");
     expect(submitted!.pdfPath).toBe(
-      path.join("applications", "2026", "Grab - Strategy Intern", "Resume - Strat · Grab Strategy Intern.pdf"),
+      path.join("applications", "2026", "Grab - Strategy Intern", "Chua Dong En - Resume.pdf"),
     );
     const pdf = fs.readFileSync(path.join(process.env.DATA_DIR!, submitted!.pdfPath!));
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
@@ -293,7 +293,7 @@ describe("resume documents", () => {
     const a = await submitResume(userId, first!.id);
     const b = await submitResume(userId, second!.id);
     expect(a!.pdfPath).not.toBe(b!.pdfPath);
-    expect(b!.pdfPath).toMatch(/Resume - Same \(2\)\.pdf$/);
+    expect(b!.pdfPath).toMatch(/Chua Dong En - Resume \(2\)\.pdf$/);
   });
 });
 

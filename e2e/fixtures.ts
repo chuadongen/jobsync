@@ -83,11 +83,14 @@ export async function createNewJob(
   const companyText = options?.company ?? `company ${suffix}`;
   const locationText = options?.location ?? `location ${suffix}`;
 
-  // Matches either entry point: the dashboard quick-action card (labeled
-  // "Add Job") when starting from /dashboard, or the myjobs page's own inline
-  // trigger (labeled "New Job", from AddJob.tsx) when already on
-  // /dashboard/myjobs — createNewJob is called from both contexts.
-  await page.getByRole("button", { name: /^(New |Add )?Job$/ }).click();
+  // Matches either entry point: the dashboard's "Add job" link when starting
+  // from /dashboard, or the myjobs page's own inline trigger (labeled
+  // "New Job", from AddJob.tsx) when already on /dashboard/myjobs —
+  // createNewJob is called from both contexts.
+  await page
+    .getByRole("button", { name: /^(New |Add )?Job$/ })
+    .or(page.getByRole("link", { name: /^Add job$/ }))
+    .click();
   await expect(page).toHaveURL(/\/dashboard\/myjobs/);
   // Dashboard's "Job" button auto-opens the dialog via ?add-job=true.
   await expect(page.getByTestId("add-job-dialog-title")).toBeVisible();

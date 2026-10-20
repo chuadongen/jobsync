@@ -10,6 +10,13 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
+// Server, browser and test runner must share one timezone (the dev server's
+// TZ in .env): otherwise dates rendered on the server and re-rendered in the
+// browser disagree near midnight, which breaks hydration and swallows clicks,
+// and expected dates computed in the tests land on the wrong day.
+const E2E_TZ = "Asia/Singapore";
+process.env.TZ = E2E_TZ;
+
 export default defineConfig({
   testDir: "./e2e",
   /* Run tests in files in parallel */
@@ -32,6 +39,8 @@ export default defineConfig({
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: "http://localhost:3737",
+
+    timezoneId: E2E_TZ,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",

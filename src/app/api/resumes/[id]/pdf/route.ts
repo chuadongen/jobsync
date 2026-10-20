@@ -5,6 +5,7 @@ import { renderResumePdf } from "@/lib/resume/pdf";
 import { readDataFile } from "@/lib/files/storage";
 import { isExportable } from "@/models/resume.model";
 import { pdfResponse } from "@/lib/files/responses";
+import { outgoingName } from "@/lib/resume/naming";
 
 // No PDF exists for a draft: approval is the gate between Claude's wording
 // and a file that could be sent. A submitted resume serves the exact file
@@ -28,12 +29,13 @@ export async function GET(
     );
   }
 
+  const title = outgoingName(doc.rendered.header.fullName, "Resume");
   if (doc.status === "submitted" && doc.pdfPath) {
     try {
-      return pdfResponse(await readDataFile(doc.pdfPath), doc.name);
+      return pdfResponse(await readDataFile(doc.pdfPath), title);
     } catch {
       // The file was moved or removed by hand: re-render the frozen snapshot.
     }
   }
-  return pdfResponse(await renderResumePdf(doc.rendered, doc.name), doc.name);
+  return pdfResponse(await renderResumePdf(doc.rendered, title), title);
 }

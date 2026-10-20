@@ -10,6 +10,7 @@ import {
 import { getResumeHeader } from "./bank";
 import { getDocDetail, markDocSubmitted } from "./docs";
 import { getLetter, markLetterSubmitted } from "./letters";
+import { outgoingName } from "./naming";
 import { renderCoverLetterPdf, renderResumePdf } from "./pdf";
 
 // Submitting writes the exact PDF that was sent into the application's
@@ -61,8 +62,9 @@ export async function submitResume(userId: string, docId: string) {
   if (doc.status !== "approved") throw new Error("Approve the resume before submitting it");
 
   const folder = await folderForJob(userId, doc.jobId);
-  const pdf = await renderResumePdf(doc.rendered, doc.name);
-  const fileName = safeFileName(`Resume - ${doc.name}.pdf`, "Resume");
+  const title = outgoingName(doc.rendered.header.fullName, "Resume");
+  const pdf = await renderResumePdf(doc.rendered, title);
+  const fileName = safeFileName(`${title}.pdf`, "Resume");
   const pdfPath = await writeUniqueFile(folder, fileName, pdf);
   return markDocSubmitted(userId, docId, doc.rendered, pdfPath);
 }
@@ -75,8 +77,9 @@ export async function submitLetter(userId: string, letterId: string) {
   const header = await getResumeHeader(userId);
   if (!header) throw new Error("Add your contact details in the Experience Bank first");
   const folder = await folderForJob(userId, letter.jobId);
-  const pdf = await renderCoverLetterPdf(header, letter.content, letter.title);
-  const fileName = safeFileName(`Cover Letter - ${letter.title}.pdf`, "Cover Letter");
+  const title = outgoingName(header.fullName, "Cover Letter");
+  const pdf = await renderCoverLetterPdf(header, letter.content, title);
+  const fileName = safeFileName(`${title}.pdf`, "Cover Letter");
   const pdfPath = await writeUniqueFile(folder, fileName, pdf);
   return markLetterSubmitted(userId, letterId, pdfPath);
 }
