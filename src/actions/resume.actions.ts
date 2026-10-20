@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { handleError } from "@/lib/utils";
+import prisma from "@/lib/db";
 import { requireUser } from "./shared";
 import * as docs from "@/lib/resume/docs";
 import * as letters from "@/lib/resume/letters";
@@ -10,22 +11,27 @@ import type { ResumeSectionKey } from "@/models/resume.model";
 // Session-scoped wrappers over lib/resume. Approval and submission live only
 // here, never in the MCP tools: those steps are the user's to take.
 
-async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+// Reads must not revalidate: Next forbids it while a page is rendering.
+async function read<T>(fn: (userId: string) => Promise<T>, msg: string) {
   try {
     const user = await requireUser();
-    const data = await fn(user.id);
-    revalidatePath("/dashboard/resumes");
-    return { success: true as const, data };
+    return { success: true as const, data: await fn(user.id) };
   } catch (error) {
     return handleError(error, msg) as { success: false; message: string };
   }
 }
 
+async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+  const result = await read(fn, msg);
+  if (result.success) revalidatePath("/dashboard/resumes");
+  return result;
+}
+
 export const getResumeDocs = async (filter: { kind?: "base" | "variant"; jobId?: string } = {}) =>
-  run((userId) => docs.listDocs(userId, filter), "Failed to load resumes.");
+  read((userId) => docs.listDocs(userId, filter), "Failed to load resumes.");
 
 export const getResumeDoc = async (docId: string) =>
-  run(async (userId) => {
+  read(async (userId) => {
     const doc = await docs.getDocDetail(userId, docId);
     if (!doc) throw new Error("Resume not found");
     return doc;
@@ -69,10 +75,10 @@ export const deleteResume = async (docId: string) =>
   }, "Failed to delete the resume.");
 
 export const getCoverLetters = async (filter: { jobId?: string } = {}) =>
-  run((userId) => letters.listLetters(userId, filter), "Failed to load cover letters.");
+  read((userId) => letters.listLetters(userId, filter), "Failed to load cover letters.");
 
 export const getCoverLetter = async (id: string) =>
-  run(async (userId) => {
+  read(async (userId) => {
     const letter = await letters.getLetter(userId, id);
     if (!letter) throw new Error("Cover letter not found");
     return letter;
@@ -97,3 +103,25 @@ export const deleteCoverLetter = async (id: string) =>
   run(async (userId) => {
     await letters.deleteLetter(userId, id);
   }, "Failed to delete the cover letter.");
+
+// For the job pickers on resumes, letters and documents: newest first, with
+// a label that tells two roles at one company apart.
+export const getJobPickerOptions = async () =>
+  read(async (userId) => {
+    const jobs = await prisma.job.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        JobTitle: { select: { label: true } },
+        Company: { select: { label: true } },
+        Status: { select: { label: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 300,
+    });
+    return jobs.map((j) => ({
+      id: j.id,
+      label: `${j.Company.label} · ${j.JobTitle.label}`,
+      status: j.Status.label,
+    }));
+  }, "Failed to load jobs.");

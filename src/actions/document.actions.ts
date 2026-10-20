@@ -7,19 +7,24 @@ import * as documents from "@/lib/files/documents";
 // Uploads go through POST /api/documents (server actions are a poor fit for
 // file bodies); everything else about a document is handled here.
 
-async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+// Reads must not revalidate: Next forbids it while a page is rendering.
+async function read<T>(fn: (userId: string) => Promise<T>, msg: string) {
   try {
     const user = await requireUser();
-    const data = await fn(user.id);
-    revalidatePath("/dashboard/documents");
-    return { success: true as const, data };
+    return { success: true as const, data: await fn(user.id) };
   } catch (error) {
     return handleError(error, msg) as { success: false; message: string };
   }
 }
 
+async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+  const result = await read(fn, msg);
+  if (result.success) revalidatePath("/dashboard/documents");
+  return result;
+}
+
 export const getDocuments = async (filter: { category?: string; jobId?: string } = {}) =>
-  run((userId) => documents.listDocuments(userId, filter), "Failed to load documents.");
+  read((userId) => documents.listDocuments(userId, filter), "Failed to load documents.");
 
 export const updateDocument = async (id: string, meta: documents.DocumentMeta) =>
   run((userId) => documents.updateDocument(userId, id, meta), "Failed to update the document.");

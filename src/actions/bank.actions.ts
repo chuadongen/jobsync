@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { handleError } from "@/lib/utils";
 import { requireUser } from "./shared";
 import * as bank from "@/lib/resume/bank";
+import { importBank } from "@/lib/resume/portable";
 import type {
   BankBulletForm,
   BankEntryForm,
@@ -12,19 +13,24 @@ import type {
 // Thin session-scoped wrappers over lib/resume/bank, which the MCP tools
 // share. Every action returns { success, data } or { success: false, message }.
 
-async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+// Reads must not revalidate: Next forbids it while a page is rendering.
+async function read<T>(fn: (userId: string) => Promise<T>, msg: string) {
   try {
     const user = await requireUser();
-    const data = await fn(user.id);
-    revalidatePath("/dashboard/bank");
-    return { success: true as const, data };
+    return { success: true as const, data: await fn(user.id) };
   } catch (error) {
     return handleError(error, msg) as { success: false; message: string };
   }
 }
 
+async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
+  const result = await read(fn, msg);
+  if (result.success) revalidatePath("/dashboard/bank");
+  return result;
+}
+
 export const getBankEntries = async (includeArchived = false) =>
-  run((userId) => bank.listBankEntries(userId, { includeArchived }), "Failed to load the experience bank.");
+  read((userId) => bank.listBankEntries(userId, { includeArchived }), "Failed to load the experience bank.");
 
 export const createBankEntry = async (form: BankEntryForm) =>
   run((userId) => bank.createBankEntry(userId, form), "Failed to add the entry.");
@@ -39,7 +45,7 @@ export const setBankEntryArchived = async (entryId: string, archived: boolean) =
   );
 
 export const getBankEntryUsage = async (entryId: string) =>
-  run((userId) => bank.countEntryUsage(userId, entryId), "Failed to check the entry.");
+  read((userId) => bank.countEntryUsage(userId, entryId), "Failed to check the entry.");
 
 export const deleteBankEntry = async (entryId: string) =>
   run((userId) => bank.deleteBankEntry(userId, entryId), "Failed to delete the entry.");
@@ -69,7 +75,7 @@ export const reorderBankBullets = async (entryId: string, orderedIds: string[]) 
   );
 
 export const getBankSuggestions = async () =>
-  run((userId) => bank.listBankSuggestions(userId), "Failed to load suggestions.");
+  read((userId) => bank.listBankSuggestions(userId), "Failed to load suggestions.");
 
 export const acceptBankSuggestion = async (id: string, editedPayload?: unknown) =>
   run(
@@ -81,7 +87,19 @@ export const rejectBankSuggestion = async (id: string) =>
   run((userId) => bank.rejectBankSuggestion(userId, id), "Failed to reject the suggestion.");
 
 export const getResumeHeader = async () =>
-  run((userId) => bank.getResumeHeader(userId), "Failed to load your contact details.");
+  read((userId) => bank.getResumeHeader(userId), "Failed to load your contact details.");
 
 export const saveResumeHeader = async (form: ResumeHeaderForm) =>
   run((userId) => bank.saveResumeHeader(userId, form), "Failed to save your contact details.");
+
+// Takes the file's text rather than a File: small, and parsed server-side.
+export const importBankJson = async (text: string) =>
+  run(async (userId) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error("That file is not valid JSON");
+    }
+    return importBank(userId, parsed);
+  }, "Failed to import the bank.");
