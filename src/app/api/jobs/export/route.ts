@@ -27,6 +27,8 @@ const extractLabel = (field: { label?: string } | undefined): string => {
 
 const mapJobType = (type: string | undefined): string => {
   switch (type) {
+    case "IN":
+      return "Internship";
     case "FT":
       return "Full Time";
     case "PT":

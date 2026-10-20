@@ -13,6 +13,8 @@ vi.mock("@/lib/db", () => {
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      // No account yet, so sign-up is open unless a test says otherwise.
+      count: vi.fn().mockResolvedValue(0),
     },
     jobSource: {
       createMany: vi.fn(),
@@ -113,6 +115,21 @@ describe("Auth Actions", () => {
           createdBy: mockNewUser.id,
         })),
       });
+    });
+
+    it("refuses a second account once one exists", async () => {
+      (prisma.user.count as any).mockResolvedValueOnce(1);
+
+      const result = await signup({
+        name: "Second",
+        email: "second@example.com",
+        password: "Password1!",
+      });
+
+      expect(result).toEqual({
+        error: "Sign-up is closed. This JobSync already has its account.",
+      });
+      expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
     it("should return error if user already exists", async () => {

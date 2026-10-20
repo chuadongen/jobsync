@@ -24,6 +24,12 @@ export async function signup(formData: {
 
   const { name, email, password } = parsed.data;
 
+  // Single-user app: the first account owns everything, and sign-up closes
+  // once it exists.
+  if ((await prisma.user.count()) > 0) {
+    return { error: "Sign-up is closed. This JobSync already has its account." };
+  }
+
   const existingUser = await prisma.user.findUnique({
     where: { email },
   });
@@ -103,4 +109,8 @@ export async function authenticate(
     }
     throw error;
   }
+}
+
+export async function isSignupOpen(): Promise<boolean> {
+  return (await prisma.user.count()) === 0;
 }

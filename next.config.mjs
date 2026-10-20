@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  // Rendered on the server only; bundling it breaks its font loading.
+  serverExternalPackages: ["@react-pdf/renderer"],
   devIndicators: false,
   async headers() {
     return [
