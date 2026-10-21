@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BriefcaseBusiness,
   CalendarClock,
+  CalendarRange,
   CheckSquare,
   Clock,
   FileText,
@@ -49,12 +50,12 @@ function Stat({ label, value, hint, href }: { label: string; value: number; hint
   return href ? <Link href={href}>{body}</Link> : body;
 }
 
-const UPCOMING_ICON = { stage: CalendarClock, deadline: Clock, task: CheckSquare };
+const UPCOMING_ICON = { stage: CalendarClock, deadline: Clock, task: CheckSquare, window: CalendarRange };
 
 export function DashboardView({ data, now }: { data: DashboardData; now: Date }) {
-  const { counts, pipeline, upcoming, drafts, suggestions, clashes, recent } = data;
+  const { counts, pipeline, upcoming, drafts, suggestions, suggestedWindows, clashes, recent } = data;
   const max = Math.max(1, ...pipeline.map((p) => p.count));
-  const attention = drafts.length + (suggestions > 0 ? 1 : 0) + clashes.length;
+  const attention = drafts.length + (suggestions > 0 ? 1 : 0) + (suggestedWindows > 0 ? 1 : 0) + clashes.length;
 
   return (
     <div className="col-span-3 space-y-4">
@@ -123,6 +124,18 @@ export function DashboardView({ data, now }: { data: DashboardData; now: Date })
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
                 <span>
                   Claude suggested {suggestions} addition{suggestions > 1 ? "s" : ""} to your experience bank.
+                </span>
+              </Link>
+            )}
+            {suggestedWindows > 0 && (
+              <Link
+                href="/dashboard/seasons"
+                className="flex items-start gap-3 rounded-md border p-3 text-sm hover:bg-muted/50"
+              >
+                <CalendarRange className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+                <span>
+                  Claude found {suggestedWindows} application window{suggestedWindows > 1 ? "s" : ""} for you to check
+                  and confirm.
                 </span>
               </Link>
             )}

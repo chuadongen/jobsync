@@ -30,6 +30,22 @@ export const MCP_TOOL_DESCRIPTIONS = {
     "Create or revise a cover letter draft for a job. Same honesty rule as resumes: only claims the experience bank supports. The user approves it in JobSync before any PDF exists.",
   list_documents:
     "List files in the user's document vault (transcripts, certificates, portfolios and so on), optionally for one job. Metadata only; file contents are not readable through this tool.",
+  list_targets:
+    "List the companies and kinds of role the user means to apply to, with known application windows (suggested or confirmed), the saved jobs that match each, and when matching jobs were first seen in past years. Call it before researching windows so you only fill what is missing or stale.",
+  save_target_windows:
+    "Save application windows you researched for a target (creating the target by name if needed). Each window is one intake with open and close dates, the role period if known, whether it is estimated from earlier years, and a source. They are saved as suggestions; the user confirms them in JobSync before they count. Never present an estimate as announced.",
+  get_job_stages:
+    "Read a job's interview rounds and other stages, with the user's own notes, any prep notes and debriefs, interviewers, the valid stage type labels, and debriefs from earlier applications to the same company. Call it before preparing the user for a round or debriefing one.",
+  add_stage:
+    "Record a new round on a job when the user tells you they got one (an online assessment, an interview, an offer). Uses the user's existing stage types only, and by default makes it the current stage, which moves the job's status.",
+  save_stage_notes:
+    "Write preparation notes before a round, or a debrief after it, on one stage. The debrief records what actually happened as the user tells it and checks it against the prep. Does not touch the user's own notes.",
+  save_job_requirements:
+    "Record what a job actually requires and how well the experience bank covers each requirement, with the bank bullets that support it. Do this whenever you read a job description to tailor for it, and pass the base version the role maps to. These build the gaps view on each base version.",
+  get_base_gaps:
+    "Read the gap data for one base version: requirements across its analysed jobs with how often each appears and how well it is covered, outcomes of applications sent with its variants, bullets without a measurable result, and the current gap report. Includes caveats when the numbers are too small to trust.",
+  save_gap_report:
+    "Save your written review of a base version's gaps: a short summary and a few concrete suggestions, each tied to the gap data. Replaces the previous report. Base versions only; job variants have no gap report.",
 } as const;
 
 export type McpToolName = keyof typeof MCP_TOOL_DESCRIPTIONS;

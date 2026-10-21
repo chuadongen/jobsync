@@ -24,13 +24,16 @@ Cover letters follow the same draft → approved → sent lifecycle.
 
 | Area | What it does |
 |---|---|
-| Jobs | Pipeline with Singapore-oriented sources and stages (Online Assessment, HireVue, Assessment Centre), role start and end dates, timeline of stages and interviewers, contacts, notes, tasks |
+| Jobs | Pipeline with Singapore-oriented sources and stages (Online Assessment, HireVue, Assessment Centre), role start and end dates, timeline of stages and interviewers, contacts, notes, tasks. An application seasons bar across the top shows when your targets take applications |
+| Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically |
+| Interview prep | Each round on a job's timeline has your own notes plus two Claude sections: prep before the round, and a debrief after it that checks the prep against what actually happened. Earlier debriefs at the same company feed the next prep |
 | Experience Bank | Entries and bullets with tags, archive, usage warnings, Claude's suggested additions for you to accept or reject, contact details for the resume header, JSON import and export |
 | Resumes | Base and variant editor with a live A4 preview and a one-page check, reorder sections, items and bullets, see where Claude reworded a bullet and revert to the bank original |
+| Base gaps | On each base version: what that kind of role asks for across the job descriptions Claude has read, how well your bank covers each requirement, how applications sent with it fared and where they stopped, bullets with no measurable result, and Claude's written review. Small numbers are labelled as a rough guide |
 | Cover letters | Editor with preview, same approval gate |
 | Documents | Upload transcripts, certificates and testimonials into a readable folder layout; link them to applications |
 | Availability | Confirmed and tentative blocks (exchange, trips, exams) on a timeline against the role periods of open applications, with clash warnings |
-| Dashboard | Open applications, interviews and closing dates in the next two weeks, drafts awaiting approval, suggestions, clashes |
+| Dashboard | Open applications, interviews, closing dates and application windows in the next two weeks, drafts awaiting approval, suggestions to check, clashes |
 | Data | One-click backup zip of the database and every file; bank export |
 
 ## Files on disk
@@ -78,7 +81,15 @@ The first account you create becomes the only one; sign-up closes after that.
    **Claude Code:** run the `claude mcp add …` command shown.
 3. Open a job in JobSync and press **Copy Claude Prompt**, then paste it into Claude. Claude picks a base, tailors it to the job description, saves a draft variant with notes on what it changed, and gives you the review link.
 
-Tools Claude has: add, find, update and search jobs; read the bank, base versions and resumes; save a variant or base draft; suggest bank additions; save a cover letter draft; list documents. Prompts: `tailor_resume`, `add_to_bank`.
+Tools Claude has:
+- **Jobs:** add, find, update and search jobs; read a job's rounds and add a round you report; save prep notes and debriefs.
+- **Seasons:** list targets; save researched application windows (as suggestions).
+- **Resumes:** read the bank, base versions and resumes; save a variant or base draft; suggest bank additions; save a cover letter draft; list documents.
+- **Gaps:** record a job's requirements and how the bank covers them (done while tailoring); read a base's gap data; save a gap review.
+
+Claude cannot approve, export or send anything, confirm a window, or edit your own stage notes.
+
+Prompts: `tailor_resume`, `add_to_bank`, `research_windows`, `prep_interview`, `debrief_interview`, `review_base_gaps`. The app also has copy-prompt buttons in the matching places: **Research with Claude** on Seasons, **Prep with Claude** and **Debrief with Claude** on each round, and **Ask Claude for a review** on a base's Gaps tab.
 
 ## Seeding your bank
 

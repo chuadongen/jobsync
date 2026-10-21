@@ -3,6 +3,7 @@ import * as bank from "@/lib/resume/bank";
 import * as docs from "@/lib/resume/docs";
 import * as letters from "@/lib/resume/letters";
 import { listDocuments } from "@/lib/files/documents";
+import { requirementLabels } from "@/lib/resume/gaps";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { splitTags } from "@/models/bank.model";
 import type { ResumeSectionKey } from "@/models/resume.model";
@@ -157,8 +158,10 @@ export function handleGetJob(input: { jobId: string }, userId: string) {
       },
     });
     if (!job) return text("Job not found.");
+    const requirementLabelsInUse = await requirementLabels(userId);
     return json({
       ...job,
+      requirementLabelsInUse,
       title: job.JobTitle.label,
       company: job.Company.label,
       location: job.Location?.label ?? null,

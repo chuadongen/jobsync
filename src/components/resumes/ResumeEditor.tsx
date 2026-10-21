@@ -73,6 +73,10 @@ import {
 } from "@/models/resume.model";
 import { ResumePreview } from "./ResumePreview";
 import { EditResumeDetailsDialog } from "./EditResumeDetailsDialog";
+import { BaseGapsPanel } from "./BaseGapsPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTabQueryParam } from "@/hooks/useTabQueryParam";
+import type { BaseGaps } from "@/models/gaps.model";
 import type { JobOption } from "./JobPicker";
 
 function contentFromDoc(doc: ResumeDocDetail): EditableContent {
@@ -122,9 +126,14 @@ type ResumeEditorProps = {
   entries: BankEntry[];
   header: ResumeHeaderData;
   jobs: JobOption[];
+  // Base versions only: variants are judged by their job, not by the market.
+  gaps?: BaseGaps | null;
 };
 
-export function ResumeEditor({ doc, entries, header, jobs }: ResumeEditorProps) {
+const EDITOR_TABS = ["content", "gaps"] as const;
+
+export function ResumeEditor({ doc, entries, header, jobs, gaps }: ResumeEditorProps) {
+  const [tab, setTab] = useTabQueryParam(EDITOR_TABS, "content");
   const router = useRouter();
   const entryMap = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
   const initial = useMemo(() => normalise(contentFromDoc(doc), entryMap), [doc, entryMap]);
@@ -207,119 +216,7 @@ export function ResumeEditor({ doc, entries, header, jobs }: ResumeEditorProps) 
   const usedEntryIds = new Set(content.items.map((i) => i.entryId));
   const sections = groupBySection(content, entryMap);
 
-  return (
-    <div className="col-span-3 space-y-4 py-2">
-      {/* Header */}
-      <div className="flex flex-wrap items-start gap-3">
-        <Button variant="ghost" size="icon" aria-label="Back to resumes" asChild>
-          <Link href="/dashboard/resumes">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{doc.name}</h1>
-            <Badge variant="outline">{doc.kind === "base" ? "Base version" : "Job variant"}</Badge>
-            <StatusBadge label={docStatusLabel(doc.status)} color={getDocStatusBadgeColor(doc.status)} />
-            {dirty && <Badge variant="secondary">Unsaved changes</Badge>}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {doc.kind === "base"
-              ? doc.targetRole || "No target role set"
-              : doc.job
-                ? (
-                    <>
-                      For{" "}
-                      <Link href={`/dashboard/myjobs/${doc.job.id}?tab=application`} className="underline-offset-4 hover:underline">
-                        {doc.job.Company.label} · {doc.job.JobTitle.label}
-                      </Link>
-                      {doc.base && ` · from the ${doc.base.name} base`}
-                    </>
-                  )
-                : "Not linked to a job"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {!frozen && (
-            <Button variant="outline" disabled={!dirty || isPending} onClick={save} data-testid="save-resume-btn">
-              Save
-            </Button>
-          )}
-          {!frozen && dirty && (
-            <Button variant="ghost" disabled={isPending} onClick={() => setContent(initial)}>
-              <Undo2 className="mr-1 h-4 w-4" /> Discard
-            </Button>
-          )}
-          {doc.status === "draft" && (
-            <Button
-              disabled={dirty || isPending || content.items.length === 0}
-              title={dirty ? "Save your changes first" : undefined}
-              onClick={() => setConfirm("approve")}
-              data-testid="approve-resume-btn"
-            >
-              <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
-            </Button>
-          )}
-          {isExportable(doc.status) && (
-            <Button variant={doc.status === "submitted" ? "default" : "outline"} asChild>
-              <a href={`/api/resumes/${doc.id}/pdf`} target="_blank" rel="noopener noreferrer" data-testid="download-pdf-btn">
-                <Download className="mr-1 h-4 w-4" /> PDF
-              </a>
-            </Button>
-          )}
-          {doc.status === "approved" && doc.kind === "variant" && (
-            <Button disabled={dirty || isPending} onClick={() => setConfirm("submit")} data-testid="submit-resume-btn">
-              <Send className="mr-1 h-4 w-4" /> Mark as sent
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="More actions">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={frozen} onClick={() => setDetailsOpen(true)}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit details
-              </DropdownMenuItem>
-              {doc.status === "approved" && (
-                <DropdownMenuItem onClick={() => act(() => revokeResumeApproval(doc.id), "Back to draft")}>
-                  <RotateCcw className="mr-2 h-4 w-4" /> Reopen as draft
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                onClick={() =>
-                  act(() => duplicateResume(doc.id), "Duplicated as a new draft", (data) =>
-                    router.push(`/dashboard/resumes/${data.id}`),
-                  )
-                }
-              >
-                <Copy className="mr-2 h-4 w-4" /> Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600" onClick={() => setConfirm("delete")}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {frozen && (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
-          <Lock className="h-4 w-4 shrink-0" />
-          <p>
-            Sent{doc.submittedAt ? ` on ${new Date(doc.submittedAt).toLocaleDateString("en-SG", { dateStyle: "medium" })}` : ""}. This is frozen as the record of what went out
-            {doc.pdfPath ? <span className="text-muted-foreground"> (saved at {doc.pdfPath})</span> : null}. Duplicate it to make changes.
-          </p>
-        </div>
-      )}
-      {doc.status === "approved" && (
-        <div className="rounded-md border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm">
-          Approved. The PDF is available. Any edit returns it to draft for another review.
-        </div>
-      )}
-
+  const editorGrid = (
       <div className="grid items-start gap-6 @5xl/main:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Editor */}
         <div className="space-y-4">
@@ -534,6 +431,142 @@ export function ResumeEditor({ doc, entries, header, jobs }: ResumeEditorProps) 
           <ResumePreview resume={preview} />
         </div>
       </div>
+  );
+
+  return (
+    <div className="col-span-3 space-y-4 py-2">
+      {/* Header */}
+      <div className="flex flex-wrap items-start gap-3">
+        <Button variant="ghost" size="icon" aria-label="Back to resumes" asChild>
+          <Link href="/dashboard/resumes">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">{doc.name}</h1>
+            <Badge variant="outline">{doc.kind === "base" ? "Base version" : "Job variant"}</Badge>
+            <StatusBadge label={docStatusLabel(doc.status)} color={getDocStatusBadgeColor(doc.status)} />
+            {dirty && <Badge variant="secondary">Unsaved changes</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {doc.kind === "base"
+              ? doc.targetRole || "No target role set"
+              : doc.job
+                ? (
+                    <>
+                      For{" "}
+                      <Link href={`/dashboard/myjobs/${doc.job.id}?tab=application`} className="underline-offset-4 hover:underline">
+                        {doc.job.Company.label} · {doc.job.JobTitle.label}
+                      </Link>
+                      {doc.base && ` · from the ${doc.base.name} base`}
+                    </>
+                  )
+                : "Not linked to a job"}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {!frozen && (
+            <Button variant="outline" disabled={!dirty || isPending} onClick={save} data-testid="save-resume-btn">
+              Save
+            </Button>
+          )}
+          {!frozen && dirty && (
+            <Button variant="ghost" disabled={isPending} onClick={() => setContent(initial)}>
+              <Undo2 className="mr-1 h-4 w-4" /> Discard
+            </Button>
+          )}
+          {doc.status === "draft" && (
+            <Button
+              disabled={dirty || isPending || content.items.length === 0}
+              title={dirty ? "Save your changes first" : undefined}
+              onClick={() => setConfirm("approve")}
+              data-testid="approve-resume-btn"
+            >
+              <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+            </Button>
+          )}
+          {isExportable(doc.status) && (
+            <Button variant={doc.status === "submitted" ? "default" : "outline"} asChild>
+              <a href={`/api/resumes/${doc.id}/pdf`} target="_blank" rel="noopener noreferrer" data-testid="download-pdf-btn">
+                <Download className="mr-1 h-4 w-4" /> PDF
+              </a>
+            </Button>
+          )}
+          {doc.status === "approved" && doc.kind === "variant" && (
+            <Button disabled={dirty || isPending} onClick={() => setConfirm("submit")} data-testid="submit-resume-btn">
+              <Send className="mr-1 h-4 w-4" /> Mark as sent
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="More actions">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={frozen} onClick={() => setDetailsOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit details
+              </DropdownMenuItem>
+              {doc.status === "approved" && (
+                <DropdownMenuItem onClick={() => act(() => revokeResumeApproval(doc.id), "Back to draft")}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Reopen as draft
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() =>
+                  act(() => duplicateResume(doc.id), "Duplicated as a new draft", (data) =>
+                    router.push(`/dashboard/resumes/${data.id}`),
+                  )
+                }
+              >
+                <Copy className="mr-2 h-4 w-4" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600" onClick={() => setConfirm("delete")}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {frozen && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
+          <Lock className="h-4 w-4 shrink-0" />
+          <p>
+            Sent{doc.submittedAt ? ` on ${new Date(doc.submittedAt).toLocaleDateString("en-SG", { dateStyle: "medium" })}` : ""}. This is frozen as the record of what went out
+            {doc.pdfPath ? <span className="text-muted-foreground"> (saved at {doc.pdfPath})</span> : null}. Duplicate it to make changes.
+          </p>
+        </div>
+      )}
+      {doc.status === "approved" && (
+        <div className="rounded-md border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm">
+          Approved. The PDF is available. Any edit returns it to draft for another review.
+        </div>
+      )}
+
+      {gaps ? (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="content">Content</TabsTrigger>
+            <TabsTrigger value="gaps" data-testid="gaps-tab">
+              Gaps
+              <Badge variant="secondary" className="ml-2">
+                {gaps.coverage.filter((c) => c.coverage !== "strong").length + gaps.missingNumbers.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="content" className="mt-4">
+            {editorGrid}
+          </TabsContent>
+          <TabsContent value="gaps" className="mt-4">
+            <BaseGapsPanel gaps={gaps} />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        editorGrid
+      )}
 
       <AlertDialog open={confirm === "approve" || confirm === "submit"} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent>

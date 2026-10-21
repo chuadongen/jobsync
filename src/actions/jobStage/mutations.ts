@@ -239,6 +239,28 @@ export const setStageNotes = async (
   }
 };
 
+// Prep notes and debriefs are usually written by Claude, but the user can
+// correct them in place, the same way as their own notes.
+export const setStagePrep = async (
+  stageId: string,
+  field: "prepNotes" | "debrief",
+  value: string,
+): Promise<any | undefined> => {
+  try {
+    const user = await requireUser();
+    if (field !== "prepNotes" && field !== "debrief") throw new Error("Unknown field");
+    await assertStageOwned(stageId, user.id);
+    const res = await prisma.jobStage.updateMany({
+      where: { id: stageId, Job: { userId: user.id } },
+      data: { [field]: value.trim() || null },
+    });
+    if (res.count === 0) throw new Error("Stage not found");
+    return { success: true };
+  } catch (error) {
+    return handleError(error, "Failed to save.");
+  }
+};
+
 // The Interviews list sets an outcome from a row menu. Its own action for the
 // same reason setStageNotes has one: updateJobStage parses the whole Add Stage
 // form and would re-run promoteStage as a side effect of one field.

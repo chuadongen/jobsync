@@ -26,6 +26,8 @@ export async function getDashboard(userId: string, now = new Date()) {
     suggestions,
     clashes,
     recent,
+    windows,
+    suggestedWindows,
   ] = await Promise.all([
     prisma.job.groupBy({ by: ["statusId"], where: { userId }, _count: { _all: true } }),
     prisma.job.count({ where: { userId, appliedDate: { gte: monthAgo } } }),
@@ -81,6 +83,25 @@ export async function getDashboard(userId: string, now = new Date()) {
       orderBy: { createdAt: "desc" },
       take: 6,
     }),
+    // Confirmed windows opening in the next four weeks, or closing in two.
+    prisma.targetWindow.findMany({
+      where: {
+        status: "confirmed",
+        target: { userId, archived: false },
+        OR: [
+          { opensAt: { gte: new Date(now.getTime() - DAY), lte: new Date(now.getTime() + 28 * DAY) } },
+          { closesAt: { gte: new Date(now.getTime() - DAY), lte: soon } },
+        ],
+      },
+      select: {
+        id: true,
+        intake: true,
+        opensAt: true,
+        closesAt: true,
+        target: { select: { name: true } },
+      },
+    }),
+    prisma.targetWindow.count({ where: { status: "suggested", target: { userId, archived: false } } }),
   ]);
 
   const statuses = await prisma.jobStatus.findMany({
@@ -98,7 +119,14 @@ export async function getDashboard(userId: string, now = new Date()) {
   const total = pipeline.reduce((n, s) => n + s.count, 0);
   const open = pipeline.filter((s) => !CLOSED_STATUSES.includes(s.value)).reduce((n, s) => n + s.count, 0);
 
-  type Upcoming = { key: string; at: Date; kind: "stage" | "deadline" | "task"; title: string; sub: string; href: string };
+  type Upcoming = {
+    key: string;
+    at: Date;
+    kind: "stage" | "deadline" | "task" | "window";
+    title: string;
+    sub: string;
+    href: string;
+  };
   const upcoming: Upcoming[] = [
     ...stages.map((s) => ({
       key: `s-${s.id}`,
@@ -126,6 +154,18 @@ export async function getDashboard(userId: string, now = new Date()) {
         sub: "Task",
         href: "/dashboard/tasks",
       })),
+    // A window shows once: as opening if that is still ahead, else as closing.
+    ...windows.map((w) => {
+      const opening = w.opensAt >= new Date(now.getTime() - DAY);
+      return {
+        key: `w-${w.id}`,
+        at: opening ? w.opensAt : w.closesAt!,
+        kind: "window" as const,
+        title: opening ? "Applications open" : "Applications close",
+        sub: `${w.target.name} · ${w.intake}`,
+        href: "/dashboard/seasons",
+      };
+    }),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return {
@@ -157,6 +197,7 @@ export async function getDashboard(userId: string, now = new Date()) {
       })),
     ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
     suggestions,
+    suggestedWindows,
     clashes,
     recent,
   };

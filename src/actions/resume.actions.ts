@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { handleError } from "@/lib/utils";
 import prisma from "@/lib/db";
 import { requireUser } from "./shared";
+import * as gaps from "@/lib/resume/gaps";
 import * as docs from "@/lib/resume/docs";
 import * as letters from "@/lib/resume/letters";
 import { submitLetter, submitResume } from "@/lib/resume/submit";
@@ -26,6 +27,9 @@ async function run<T>(fn: (userId: string) => Promise<T>, msg: string) {
   if (result.success) revalidatePath("/dashboard/resumes");
   return result;
 }
+
+export const getBaseGaps = async (baseId: string) =>
+  read((userId) => gaps.getBaseGaps(userId, baseId), "Failed to load the gaps.");
 
 export const getResumeDocs = async (filter: { kind?: "base" | "variant"; jobId?: string } = {}) =>
   read((userId) => docs.listDocs(userId, filter), "Failed to load resumes.");

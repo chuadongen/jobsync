@@ -38,6 +38,9 @@ model User {
   CoverLetter       CoverLetter[]
   Document          Document[]
   AvailabilityBlock AvailabilityBlock[]
+  Target            Target[]
+  JobAnalysis       JobAnalysis[]
+  GapReport         GapReport[]
 }
 
 model UserSettings {
@@ -219,6 +222,10 @@ model JobStage {
   isCurrent    Boolean               @default(false)
   outcome      String?
   notes        String?
+  // Written with Claude: preparation before the round, and what actually
+  // happened after it. The user's own notes stay in `notes`.
+  prepNotes    String?
+  debrief      String?
   durationMins Int?
   format       String?
   location     String?
@@ -278,6 +285,7 @@ model Job {
   resumeDocs    ResumeDoc[]
   coverLetters  CoverLetter[]
   documents     Document[]
+  analysis      JobAnalysis?
 
   // MCP provenance: which agent/token created this job (null = UI)
   createdVia              String?
@@ -442,18 +450,18 @@ model BankSuggestion {
 }
 
 model ResumeDoc {
-  id           String       @id @default(uuid())
+  id           String        @id @default(uuid())
   userId       String
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   // "base" | "variant"
   kind         String
   name         String
   // Variant only: the base it was derived from and the job it targets
   baseId       String?
-  base         ResumeDoc?   @relation("BaseVariants", fields: [baseId], references: [id], onDelete: SetNull)
-  variants     ResumeDoc[]  @relation("BaseVariants")
+  base         ResumeDoc?    @relation("BaseVariants", fields: [baseId], references: [id], onDelete: SetNull)
+  variants     ResumeDoc[]   @relation("BaseVariants")
   jobId        String?
-  job          Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  job          Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
   // Base only: the kind of role it targets, guidance for Claude
   targetRole   String?
   // JSON array of section keys in print order
@@ -461,7 +469,7 @@ model ResumeDoc {
   // Why Claude chose what it chose, shown during review
   rationale    String?
   // "draft" | "approved" | "submitted"; only approved or submitted docs export
-  status       String       @default("draft")
+  status       String        @default("draft")
   approvedAt   DateTime?
   submittedAt  DateTime?
   // JSON of the rendered content, frozen on submit
@@ -469,9 +477,12 @@ model ResumeDoc {
   // PDF written on submit, relative to the data directory
   pdfPath      String?
   createdVia   String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   items        ResumeItem[]
+  // Base only: job analyses mapped to it, and Claude's latest gap report
+  analyses     JobAnalysis[]
+  gapReport    GapReport?
 
   @@index([userId, kind])
   @@index([jobId])
@@ -566,4 +577,83 @@ model AvailabilityBlock {
   updatedAt DateTime @updatedAt
 
   @@index([userId, startDate])
+}
+
+// A company or kind of role the user means to apply to, whether or not a
+// posting exists yet. Jobs match it by company name and/or a title keyword.
+model Target {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  company    String?
+  keyword    String?
+  notes      String?
+  archived   Boolean        @default(false)
+  createdVia String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  windows    TargetWindow[]
+
+  @@index([userId])
+}
+
+// When applications for one intake open and close. Claude's research lands
+// as "suggested" and only counts once the user confirms it.
+model TargetWindow {
+  id         String    @id @default(uuid())
+  targetId   String
+  target     Target    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  intake     String
+  opensAt    DateTime
+  closesAt   DateTime?
+  roleStart  DateTime?
+  roleEnd    DateTime?
+  // Inferred from earlier years rather than announced for this intake
+  estimated  Boolean   @default(false)
+  // "suggested" | "confirmed"
+  status     String    @default("confirmed")
+  source     String?
+  checkedAt  DateTime  @default(now())
+  createdVia String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([targetId])
+}
+
+// What a job asks for, extracted by Claude while tailoring, with its read of
+// how well the bank covers each requirement. Feeds the gaps view on bases.
+model JobAnalysis {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId        String     @unique
+  job          Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  baseId       String?
+  base         ResumeDoc? @relation(fields: [baseId], references: [id], onDelete: SetNull)
+  // JSON array of { label, kind, importance, coverage, evidence }
+  requirements String
+  createdVia   String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([userId, baseId])
+}
+
+// Claude's written review of one base version's gaps.
+model GapReport {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseId      String    @unique
+  base        ResumeDoc @relation(fields: [baseId], references: [id], onDelete: Cascade)
+  summary     String
+  // JSON array of { title, detail, evidence }
+  suggestions String
+  createdVia  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
 }

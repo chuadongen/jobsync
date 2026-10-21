@@ -28,6 +28,8 @@ export interface JobStage {
   isCurrent: boolean;
   outcome: string | null;
   notes: string | null;
+  prepNotes?: string | null;
+  debrief?: string | null;
   durationMins: number | null;
   format: string | null;
   location: string | null;

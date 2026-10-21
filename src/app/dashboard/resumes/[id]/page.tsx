@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBankEntries, getResumeHeader } from "@/actions/bank.actions";
-import { getJobPickerOptions, getResumeDoc } from "@/actions/resume.actions";
+import { getBaseGaps, getJobPickerOptions, getResumeDoc } from "@/actions/resume.actions";
 import { ResumeEditor } from "@/components/resumes/ResumeEditor";
 import type { BankEntry } from "@/models/bank.model";
 
@@ -19,6 +19,7 @@ export default async function ResumePage({ params }: { params: Promise<{ id: str
     getJobPickerOptions(),
   ]);
   if (!doc.success) notFound();
+  const gaps = doc.data.kind === "base" ? await getBaseGaps(doc.data.id) : null;
   return (
     <ResumeEditor
       // Remount after a save so the working copy restarts from the server.
@@ -35,6 +36,7 @@ export default async function ResumePage({ params }: { params: Promise<{ id: str
         }
       }
       jobs={jobs.success ? jobs.data : []}
+      gaps={gaps?.success ? gaps.data : null}
     />
   );
 }

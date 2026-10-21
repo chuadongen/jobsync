@@ -30,6 +30,17 @@ import { handleFindJob } from "@/lib/mcp/tools/findJob";
 import { handleUpdateJob } from "@/lib/mcp/tools/updateJob";
 import { handleAddJobsBatch } from "@/lib/mcp/tools/addJobsBatch";
 import * as resumeTools from "@/lib/mcp/tools/resume";
+import * as planningTools from "@/lib/mcp/tools/planning";
+import {
+  McpAddStageInputShape,
+  McpGetBaseGapsInputShape,
+  McpGetJobStagesInputShape,
+  McpListTargetsInputShape,
+  McpSaveGapReportInputShape,
+  McpSaveJobRequirementsInputShape,
+  McpSaveStageNotesInputShape,
+  McpSaveTargetWindowsInputShape,
+} from "@/models/mcpPlanning.schema";
 
 // Sent to the client on connect. Claude reads it before choosing tools, so it
 // carries the working rules rather than leaving them to each description.
@@ -44,10 +55,17 @@ Tailoring a resume for a job:
 1. get_job (or search_jobs, then add_job if the posting is not saved yet).
 2. list_resumes to pick the base whose targetRole fits; get_resume to read it.
 3. get_experience_bank for the full material.
-4. save_resume_variant with the tailored items and a rationale that maps choices to the job's requirements and names any gaps.
-5. Give the user the review link from the result.
+4. save_job_requirements with the posting's real requirements, your honest read of how well the bank covers each, and the base you chose.
+5. save_resume_variant with the tailored items and a rationale that maps choices to the job's requirements and names any gaps.
+6. Give the user the review link from the result.
 
-Keep variants to one page: typically 3 to 4 experience or project entries with 2 to 4 bullets each.`;
+Keep variants to one page: typically 3 to 4 experience or project entries with 2 to 4 bullets each.
+
+Application seasons: list_targets first, research only what is missing or stale, and save findings with save_target_windows, always with a source. Say plainly when dates are estimated from earlier years.
+
+Interview rounds: get_job_stages before preparing (it includes debriefs from earlier rounds at the same company). Save preparation with save_stage_notes as prepNotes. After the round, ask the user what actually happened, then save a debrief that checks the prep against reality. If the user reports a round JobSync does not have yet, add it with add_stage.
+
+Base version gaps: get_base_gaps, then save_gap_report with suggestions that follow from the data. Respect its caveats: with few applications, outcome numbers are not market feedback.`;
 
 type ToolResult = { content: Array<{ type: "text"; text: string }> };
 const deny = (scope: string): ToolResult => ({
@@ -141,6 +159,23 @@ async function handler(req: Request): Promise<Response> {
   register("list_documents", "resume:write", McpListDocumentsInputShape,
     (input) => resumeTools.handleListDocuments(input, userId));
 
+  register("list_targets", "jobs:write", McpListTargetsInputShape,
+    (input) => planningTools.handleListTargets(input, userId));
+  register("save_target_windows", "jobs:write", McpSaveTargetWindowsInputShape,
+    (input) => planningTools.handleSaveTargetWindows(input as any, userId, tokenName));
+  register("get_job_stages", "jobs:write", McpGetJobStagesInputShape,
+    (input) => planningTools.handleGetJobStages(input, userId));
+  register("add_stage", "jobs:write", McpAddStageInputShape,
+    (input) => planningTools.handleAddStage(input, userId));
+  register("save_stage_notes", "jobs:write", McpSaveStageNotesInputShape,
+    (input) => planningTools.handleSaveStageNotes(input, userId));
+  register("save_job_requirements", "resume:write", McpSaveJobRequirementsInputShape,
+    (input) => planningTools.handleSaveJobRequirements(input as any, userId, tokenName));
+  register("get_base_gaps", "resume:write", McpGetBaseGapsInputShape,
+    (input) => planningTools.handleGetBaseGaps(input, userId));
+  register("save_gap_report", "resume:write", McpSaveGapReportInputShape,
+    (input) => planningTools.handleSaveGapReport(input as any, userId, tokenName));
+
   // Ready-made starting points in clients that surface MCP prompts.
   server.registerPrompt(
     "tailor_resume",
@@ -173,6 +208,79 @@ async function handler(req: Request): Promise<Response> {
           content: {
             type: "text",
             text: `Here is something I did. Ask me anything you need to make it concrete and measurable, then propose it with suggest_bank_additions, matching it to an existing bank entry where it belongs:\n\n${experience}`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "research_windows",
+    {
+      description: "Find when applications open and close for your target companies and roles.",
+      argsSchema: { targets: z.string().optional().describe("Companies or roles to focus on; blank for all targets") },
+    },
+    ({ targets }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Research application windows in JobSync${targets ? ` for: ${targets}` : ""}. Start with list_targets, search the web for when applications open and close for the next intake and the role dates, and save each with save_target_windows including the source. Mark anything inferred from earlier years as estimated, and tell me which ones you could not find.`,
+          },
+        },
+      ],
+    }),
+  );
+  server.registerPrompt(
+    "prep_interview",
+    {
+      description: "Prepare for an upcoming round on a saved job.",
+      argsSchema: { job: z.string().describe("Job id, or the company and role") },
+    },
+    ({ job }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Help me prepare for my next round for this JobSync job: ${job}. Read get_job_stages, get_job and the resume I sent, then save prep notes on the stage with save_stage_notes and walk me through them.`,
+          },
+        },
+      ],
+    }),
+  );
+  server.registerPrompt(
+    "debrief_interview",
+    {
+      description: "Record what actually happened in a round and check it against your prep.",
+      argsSchema: { job: z.string().describe("Job id, or the company and role") },
+    },
+    ({ job }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Debrief my latest round for this JobSync job: ${job}. Read get_job_stages, ask me what happened, then save a debrief with save_stage_notes that compares it with the prep notes.`,
+          },
+        },
+      ],
+    }),
+  );
+  server.registerPrompt(
+    "review_base_gaps",
+    {
+      description: "Review where a base resume falls short for its kind of role.",
+      argsSchema: { base: z.string().describe("Base version id or name, e.g. PM") },
+    },
+    ({ base }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Review the gaps for my "${base}" base version in JobSync. Use get_base_gaps and get_experience_bank, then save a gap report with save_gap_report and summarise it for me.`,
           },
         },
       ],

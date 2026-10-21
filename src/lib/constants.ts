@@ -8,6 +8,7 @@ import {
   Library,
   Sheet,
   CalendarCheck,
+  Target,
 } from "lucide-react";
 
 export const APP_CONSTANTS = {
@@ -191,6 +192,11 @@ export const SIDEBAR_LINKS: {
     icon: BriefcaseBusiness,
     route: "/dashboard/myjobs",
     label: "Jobs",
+  },
+  {
+    icon: Target,
+    route: "/dashboard/seasons",
+    label: "Seasons",
   },
   {
     icon: CalendarCheck,
