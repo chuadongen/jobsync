@@ -52,6 +52,12 @@ data/
 
 Sent files are named for the recruiter (your name, then Resume or Cover Letter), and the PDF title matches. Files are never overwritten: a name clash gets " (2)" appended. Deleting a sent resume's record keeps its PDF.
 
+## Trying it in a Codespace
+
+No server needed: on GitHub, open the repository on this branch, then **Code → Codespaces → Create codespace**. The first start installs everything and creates the database (a few minutes); the app then opens in a new tab. Create your account, and import your bank file on the Experience Bank page.
+
+The Codespace's database and files live only in that Codespace. Download a backup from **Settings → Data & Backup** before deleting it.
+
 ## Running it locally
 
 Requires Node 20+.
