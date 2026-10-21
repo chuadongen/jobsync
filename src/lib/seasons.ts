@@ -1,3 +1,4 @@
+import { addYears, format } from "date-fns";
 import prisma from "@/lib/db";
 import {
   TargetFormSchema,
@@ -7,6 +8,7 @@ import {
   type TargetForm,
   type WindowForm,
   type WindowStatus,
+  nextIntakeName,
 } from "@/models/seasons.model";
 
 const WINDOW_ORDER = { orderBy: { opensAt: "asc" as const } };
@@ -197,4 +199,65 @@ export async function suggestWindows(
 
 export async function countSuggestedWindows(userId: string) {
   return prisma.targetWindow.count({ where: { status: "suggested", target: { userId, archived: false } } });
+}
+
+// Next year's window, estimated from this one. When a matching job was saved
+// before the recorded open date that year, the window really opened earlier,
+// so that date is the better anchor. The result is the user's own estimate:
+// confirmed, but flagged as estimated until research replaces it.
+export async function rolloverWindow(userId: string, windowId: string) {
+  const window = await prisma.targetWindow.findFirst({
+    where: { id: windowId, target: { userId } },
+  });
+  if (!window) throw new Error("Window not found");
+  if (window.status !== "confirmed") throw new Error("Confirm the window before estimating from it");
+
+  const intake = nextIntakeName(window.intake);
+  const exists = await prisma.targetWindow.count({ where: { targetId: window.targetId, intake } });
+  if (exists) throw new Error(`${intake} already has a window`);
+
+  const [target] = (await listTargets(userId, { includeArchived: true })).filter((t) => t.id === window.targetId);
+  const seen = target?.observed.find((o) => o.year === window.opensAt.getFullYear())?.firstSeen;
+  const anchor = seen && seen < window.opensAt ? seen : window.opensAt;
+  // Keep the window's length when the open date moves earlier.
+  const shift = window.opensAt.getTime() - anchor.getTime();
+  const next = (d: Date | null) => (d ? addYears(d, 1) : null);
+
+  return prisma.targetWindow.create({
+    data: {
+      targetId: window.targetId,
+      intake,
+      opensAt: addYears(anchor, 1),
+      closesAt: window.closesAt ? addYears(new Date(window.closesAt.getTime() - shift), 1) : null,
+      roleStart: next(window.roleStart),
+      roleEnd: next(window.roleEnd),
+      estimated: true,
+      status: "confirmed",
+      source:
+        anchor === window.opensAt
+          ? `Estimated from ${window.intake}`
+          : `Estimated from ${window.intake}: a matching job was saved on ${format(anchor, "d MMM yyyy")}, before the recorded open date`,
+    },
+  });
+}
+
+// Every confirmed window that has closed and has no successor yet.
+export async function rollableWindows(userId: string, now = new Date()) {
+  const targets = await listTargets(userId);
+  const ninetyDays = 90 * 86_400_000;
+  return targets.flatMap((t) =>
+    t.windows.filter((w) => {
+      if (w.status !== "confirmed") return false;
+      const over = w.closesAt ? w.closesAt < now : now.getTime() - w.opensAt.getTime() > ninetyDays;
+      if (!over) return false;
+      const nextName = nextIntakeName(w.intake);
+      return !t.windows.some((other) => other.intake === nextName);
+    }),
+  );
+}
+
+export async function rolloverAll(userId: string, now = new Date()) {
+  const windows = await rollableWindows(userId, now);
+  for (const w of windows) await rolloverWindow(userId, w.id);
+  return windows.length;
 }

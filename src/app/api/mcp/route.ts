@@ -61,7 +61,7 @@ Tailoring a resume for a job:
 
 Keep variants to one page: typically 3 to 4 experience or project entries with 2 to 4 bullets each.
 
-Application seasons: list_targets first, research only what is missing or stale, and save findings with save_target_windows, always with a source. Say plainly when dates are estimated from earlier years.
+Application seasons: list_targets first, research only what is missing or stale, and save findings with save_target_windows, always with a source. Windows marked estimated were usually rolled over from last year; replace them once the real dates are announced. Say plainly when dates are estimated from earlier years.
 
 Interview rounds: get_job_stages before preparing (it includes debriefs from earlier rounds at the same company). Save preparation with save_stage_notes as prepNotes. After the round, ask the user what actually happened, then save a debrief that checks the prep against reality. If the user reports a round JobSync does not have yet, add it with add_stage.
 

@@ -5,11 +5,24 @@ const codespaceHost = process.env.CODESPACE_NAME
   ? `${process.env.CODESPACE_NAME}-3737.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN ?? "app.github.dev"}`
   : null;
 
+// Behind a reverse proxy (tailscale serve, Caddy) the browser's origin is the
+// public address while the forwarded host may be localhost. Allow the address
+// in NEXTAUTH_URL. Read at build time, so the Docker build receives it.
+const publicHost = (() => {
+  try {
+    return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).host : null;
+  } catch {
+    return null;
+  }
+})();
+
+const allowedOrigins = [codespaceHost, publicHost].filter(Boolean);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  ...(codespaceHost && {
-    allowedDevOrigins: [codespaceHost],
-    experimental: { serverActions: { allowedOrigins: [codespaceHost, "localhost:3737"] } },
+  ...(codespaceHost && { allowedDevOrigins: [codespaceHost] }),
+  ...(allowedOrigins.length > 0 && {
+    experimental: { serverActions: { allowedOrigins: [...allowedOrigins, "localhost:3737"] } },
   }),
   output: "standalone",
   // Rendered on the server only; bundling it breaks its font loading.

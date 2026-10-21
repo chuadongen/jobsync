@@ -139,3 +139,19 @@ export const WINDOW_PHASE_LABELS: Record<WindowPhase, string> = {
   closing: "Closing soon",
   closed: "Closed",
 };
+
+// "Summer 2027" becomes "Summer 2028", "AY2026/27 internship" becomes
+// "AY2027/28 internship". An intake with no year gets "(next year)".
+export function nextIntakeName(intake: string): string {
+  let changed = false;
+  const bumped = intake
+    .replace(/(?<!\d)(20\d{2})\/(\d{2})(?!\d)/g, (_, a: string, b: string) => {
+      changed = true;
+      return `${Number(a) + 1}/${String((Number(b) + 1) % 100).padStart(2, "0")}`;
+    })
+    .replace(/(?<![\d/])(20\d{2})(?![\d/])/g, (y: string) => {
+      changed = true;
+      return String(Number(y) + 1);
+    });
+  return changed ? bumped : `${intake} (next year)`;
+}

@@ -25,7 +25,7 @@ Cover letters follow the same draft → approved → sent lifecycle.
 | Area | What it does |
 |---|---|
 | Jobs | Pipeline with Singapore-oriented sources and stages (Online Assessment, HireVue, Assessment Centre), role start and end dates, timeline of stages and interviewers, contacts, notes, tasks. An application seasons bar across the top shows when your targets take applications |
-| Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically |
+| Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically. Once a season closes, **Estimate next year** copies its windows forward a year (anchored on when your matching jobs actually appeared), marked as estimates for Claude to verify |
 | Interview prep | Each round on a job's timeline has your own notes plus two Claude sections: prep before the round, and a debrief after it that checks the prep against what actually happened. Earlier debriefs at the same company feed the next prep |
 | Experience Bank | Entries and bullets with tags, archive, usage warnings, Claude's suggested additions for you to accept or reject, contact details for the resume header, JSON import and export |
 | Resumes | Base and variant editor with a live A4 preview and a one-page check, reorder sections, items and bullets, see where Claude reworded a bullet and revert to the bank original |
@@ -106,9 +106,123 @@ npm run test:e2e       # Playwright
 
 Integration specs (`__tests__/*.integration.spec.ts`) cover the rules that matter most: bullet provenance, the approval gate, frozen snapshots, file paths that cannot escape `DATA_DIR`, MCP scopes, and bank import validation.
 
-## Deployment
+## Deployment (Ubuntu server on Tailscale)
 
-Not finalised yet. The Dockerfile and `docker-compose.yml` come from upstream and still need adjusting for this fork (mounting `/data`, `TZ=Asia/Singapore`, `NEXTAUTH_URL` set to the address your devices use).
+JobSync runs as one Docker container bound to `127.0.0.1` only. `tailscale serve` puts it on your tailnet over HTTPS on its own port, so it sits beside your other services without touching them, and nothing is exposed to the internet.
+
+```
+your laptop / phone ──tailnet, HTTPS──► tailscale serve :8443 ──► 127.0.0.1:3737 ──► container ──► ./jobsync-data
+```
+
+### What you need
+
+- Docker Engine with the Compose plugin ([install guide](https://docs.docker.com/engine/install/ubuntu/)). Check with `docker compose version`.
+- Tailscale on the server, already in your tailnet.
+- **HTTPS certificates enabled for your tailnet:** Tailscale admin console → **DNS** → turn on **MagicDNS** and **HTTPS Certificates**. If your other services already use `https://…ts.net`, this is done.
+
+### 1. Get the code
+
+```bash
+git clone https://github.com/chuadongen/jobsync.git ~/jobsync
+cd ~/jobsync
+git checkout claude/personal-rework   # or main, once merged
+```
+
+### 2. Pick a port and an address
+
+```bash
+sudo tailscale serve status          # HTTPS ports your other services already use
+ss -ltn | grep -E ':3737\b'          # anything already on 3737?
+tailscale status --json | grep -m1 '"DNSName"'   # e.g. "myserver.tail1234.ts.net."
+```
+
+Choose an HTTPS port nothing else uses on the tailnet side (this guide uses **8443**) and a local port that is free (default **3737**).
+
+### 3. Configure
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set:
+
+| Variable | Value |
+|---|---|
+| `NEXTAUTH_URL` | `https://myserver.tail1234.ts.net:8443` (your DNS name without the trailing dot, and your port) |
+| `JOBSYNC_PORT` | `3737`, or the free local port you picked |
+| `JOBSYNC_DATA` | `./jobsync-data` is fine; any absolute path works |
+| `BACKUP_TOKEN` | output of `openssl rand -hex 32` |
+| `TZ` | `Asia/Singapore` |
+
+Leave `AUTH_SECRET` empty: one is generated on first start and kept in the data folder, so restarts do not log you out. The lines under "Local development only" are ignored on the server.
+
+### 4. Build and start
+
+```bash
+./deploy.sh
+```
+
+The first build takes a few minutes. The script waits until the app answers on `127.0.0.1`.
+
+### 5. Put it on the tailnet
+
+```bash
+sudo tailscale serve --bg --https=8443 http://127.0.0.1:3737
+sudo tailscale serve status
+```
+
+This adds one entry and leaves your other `serve` entries as they are. Do not run `tailscale serve reset`, which clears all of them. JobSync must be served at the root of its own port, not under a path such as `/jobsync`.
+
+### 6. Create your account straight away
+
+Open `https://myserver.tail1234.ts.net:8443` from any device on your tailnet and create your account. The first account is the only one and sign-up closes after it, so do this before anyone else on your tailnet could.
+
+Then import your bank file on the **Experience Bank** page, and connect Claude as described in [Connecting Claude](#connecting-claude). The computer running Claude Desktop needs Tailscale running. The config snippet in Settings already uses the HTTPS address.
+
+### 7. Nightly backups
+
+```bash
+mkdir -p ~/jobsync-backups
+crontab -e
+```
+
+Add (adjust the paths to your home directory):
+
+```
+30 3 * * * /home/YOU/jobsync/scripts/backup.sh /home/YOU/jobsync-backups >> /home/YOU/jobsync-backups/backup.log 2>&1
+```
+
+Each run saves `jobsync-YYYY-MM-DD-HHMMSS.zip` (database, documents and sent PDFs) and keeps the newest 30 (`KEEP=60 scripts/backup.sh …` to keep more). The script refuses anything that is not a real zip, so a failed run shows in `backup.log` instead of leaving a broken file. Run it once by hand to check, and copy the backup folder somewhere off the server from time to time, for example with `rsync` to another tailnet machine.
+
+### Updating
+
+```bash
+cd ~/jobsync && ./deploy.sh
+```
+
+This pulls the branch, rebuilds and restarts. Data in `jobsync-data` is untouched; database migrations run on start.
+
+### Restoring a backup
+
+```bash
+cd ~/jobsync
+docker compose down
+unzip -o ~/jobsync-backups/jobsync-2026-10-21-033000.zip -d ./jobsync-data
+docker compose up -d
+```
+
+`jobsync.db`, `vault/` and `applications/` land back in the data folder. You will need to sign in again if the restore is onto a fresh data folder.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| The page will not load over HTTPS | `sudo tailscale serve status` should list your port pointing at `127.0.0.1:3737`; `curl -I http://127.0.0.1:3737/signin` on the server should return 200. |
+| Login loops back to the sign-in page, or buttons do nothing | `NEXTAUTH_URL` must match the address in the browser exactly, port included. It is built into the image, so after fixing `.env`, run `./deploy.sh` again. |
+| Port already in use on start | Change `JOBSYNC_PORT` in `.env`, use the same port in the `tailscale serve` command, and run `./deploy.sh`. |
+| Claude Desktop shows no jobsync tools | Tailscale must be running on that computer; the token must be current (Settings → MCP Access); restart Claude Desktop fully after editing its config. |
+| Anything else | `docker compose logs --tail 100` |
 
 ## Licence
 

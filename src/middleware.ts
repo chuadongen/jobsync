@@ -8,6 +8,8 @@ export const config = {
   matcher: [
     "/dashboard",
     "/dashboard/:path*",
-    "/api/((?!auth|mcp).*)",
+    // mcp and backup authenticate their own bearer tokens (and backup also
+    // accepts a session), so the login redirect must not intercept them.
+    "/api/((?!auth|mcp|backup).*)",
   ],
 };

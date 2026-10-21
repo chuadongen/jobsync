@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Archive,
   ArchiveRestore,
+  CalendarPlus,
   Check,
   MoreVertical,
   Pencil,
@@ -30,6 +31,8 @@ import { DeleteAlertDialog } from "@/components/DeleteAlertDialog";
 import { JobTabEmptyState } from "@/components/myjobs/job-details/JobTabEmptyState";
 import {
   confirmWindow,
+  rolloverAll,
+  rolloverWindow,
   deleteTarget,
   deleteWindow,
   setTargetArchived,
@@ -44,6 +47,7 @@ import {
   type SeasonTarget,
   type SeasonWindow,
   type WindowPhase,
+  nextIntakeName,
 } from "@/models/seasons.model";
 import { formatDay } from "@/components/availability/dates";
 import { SeasonsBar } from "./SeasonsBar";
@@ -63,12 +67,14 @@ function WindowRow({
   onEdit,
   onDelete,
   onConfirm,
+  onRollover,
 }: {
   window: SeasonWindow;
   now: Date | null;
   onEdit: () => void;
   onDelete: () => void;
   onConfirm?: () => void;
+  onRollover?: () => void;
 }) {
   const phase = now ? windowPhase(w, now) : null;
   return (
@@ -122,6 +128,18 @@ function WindowRow({
             <Check className="mr-1 h-3.5 w-3.5" /> Confirm
           </Button>
         )}
+        {onRollover && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            aria-label={`Estimate next year from ${w.intake}`}
+            title="Estimate next year's window from this one"
+            onClick={onRollover}
+          >
+            <CalendarPlus className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Edit ${w.intake}`} onClick={onEdit}>
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -139,7 +157,16 @@ function WindowRow({
   );
 }
 
-export function SeasonsContainer({ targets, blocks }: { targets: SeasonTarget[]; blocks: AvailabilityBlock[] }) {
+export function SeasonsContainer({
+  targets,
+  blocks,
+  rollableCount,
+}: {
+  targets: SeasonTarget[];
+  blocks: AvailabilityBlock[];
+  // Closed confirmed windows that have no next-year window yet
+  rollableCount: number;
+}) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
@@ -178,7 +205,22 @@ export function SeasonsContainer({ targets, blocks }: { targets: SeasonTarget[];
             The companies and roles you are aiming for, and when each one takes applications.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {rollableCount > 0 && (
+            <Button
+              variant="outline"
+              title="Copy each closed window forward a year, marked as estimated"
+              onClick={() =>
+                act(
+                  () => rolloverAll(),
+                  `Estimated ${rollableCount} window${rollableCount > 1 ? "s" : ""} for next year`,
+                )
+              }
+              data-testid="rollover-all-btn"
+            >
+              <CalendarPlus className="mr-2 h-4 w-4" /> Estimate next year ({rollableCount})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => copyClaudePrompt(RESEARCH_WINDOWS_PROMPT)}>
             <Sparkles className="mr-2 h-4 w-4" /> Research with Claude
           </Button>
@@ -295,6 +337,11 @@ export function SeasonsContainer({ targets, blocks }: { targets: SeasonTarget[];
                           now={now}
                           onEdit={() => setWindowDialog({ open: true, target: t, window: w })}
                           onDelete={() => act(() => deleteWindow(w.id), "Window deleted")}
+                          onRollover={
+                            t.windows.some((other) => other.intake === nextIntakeName(w.intake))
+                              ? undefined
+                              : () => act(() => rolloverWindow(w.id), `Estimated ${nextIntakeName(w.intake)}`)
+                          }
                         />
                       ))}
                     </ul>

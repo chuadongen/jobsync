@@ -12,7 +12,7 @@ const gaps = await import("@/lib/resume/gaps");
 const stages = await import("@/lib/stages");
 const bank = await import("@/lib/resume/bank");
 const docs = await import("@/lib/resume/docs");
-const { windowPhase, jobMatchesTarget } = await import("@/models/seasons.model");
+const { windowPhase, jobMatchesTarget, nextIntakeName } = await import("@/models/seasons.model");
 const { furthestStage, hasNumber } = await import("@/models/gaps.model");
 const { POST } = await import("@/app/api/mcp/route");
 
@@ -162,6 +162,60 @@ describe("seasons", () => {
     const listed = JSON.parse(await rpc("list_targets", {}));
     const shopee = listed.find((t: any) => t.name === "Shopee PM");
     expect(shopee.windows[0]).toMatchObject({ status: "suggested", opensAt: "2026-09-01", estimated: true });
+  });
+});
+
+describe("rollover to next year", () => {
+  it("names the next intake", () => {
+    expect(nextIntakeName("Summer 2027")).toBe("Summer 2028");
+    expect(nextIntakeName("AY2026/27 internship")).toBe("AY2027/28 internship");
+    expect(nextIntakeName("Off-cycle Jan 2027")).toBe("Off-cycle Jan 2028");
+    expect(nextIntakeName("Graduate programme")).toBe("Graduate programme (next year)");
+  });
+
+  it("anchors on when a matching job was first saved if that was before the recorded open", async () => {
+    // A Grab job was saved on 10 Sep 2026, before the window's recorded 1 Oct.
+    await makeJob(userId, "Grab", "Software Intern");
+    const target = await seasons.saveTarget(userId, { name: "Grab SWE", company: "Grab", keyword: "Software" });
+    const w = await seasons.saveWindow(userId, target.id, {
+      intake: "Summer 2027",
+      opensAt: new Date("2026-10-01"),
+      closesAt: new Date("2026-10-31"),
+      roleStart: new Date("2027-05-17"),
+      roleEnd: new Date("2027-08-13"),
+    });
+    const next = await seasons.rolloverWindow(userId, w.id);
+    expect(next).toMatchObject({
+      intake: "Summer 2028",
+      estimated: true,
+      status: "confirmed",
+      opensAt: new Date("2027-09-10"),
+      // Same length as before: 30 days after opening.
+      closesAt: new Date("2027-10-10"),
+      roleStart: new Date("2028-05-17"),
+    });
+    expect(next.source).toMatch(/matching job was saved on 10 Sep 2026/);
+    await expect(seasons.rolloverWindow(userId, w.id)).rejects.toThrow("Summer 2028 already has a window");
+  });
+
+  it("rolls over only closed, confirmed windows without a successor", async () => {
+    const target = await seasons.saveTarget(userId, { name: "Roll target", company: "Rollco" });
+    await seasons.saveWindow(userId, target.id, { intake: "Spring 2026", opensAt: new Date("2026-01-01"), closesAt: new Date("2026-02-01") });
+    await seasons.saveWindow(userId, target.id, { intake: "Summer 2027", opensAt: new Date("2026-10-01"), closesAt: new Date("2026-12-01") });
+    await seasons.suggestWindows(
+      userId,
+      { target: { id: target.id }, windows: [{ intake: "Winter 2025", opensAt: new Date("2025-01-01"), closesAt: new Date("2025-02-01"), source: "x" }] },
+      "Claude",
+    );
+    const rollable = await seasons.rollableWindows(userId, new Date("2026-10-21"));
+    expect(rollable.map((w) => w.intake)).toContain("Spring 2026");
+    expect(rollable.map((w) => w.intake)).not.toContain("Winter 2025");
+    const before = rollable.length;
+    expect(await seasons.rolloverAll(userId, new Date("2026-10-21"))).toBe(before);
+    expect(await seasons.rollableWindows(userId, new Date("2026-10-21"))).toEqual([]);
+    const intakes = (await seasons.listTargets(userId)).find((t) => t.id === target.id)!.windows.map((w) => w.intake);
+    expect(intakes).toEqual(expect.arrayContaining(["Spring 2026", "Spring 2027", "Summer 2027"]));
+    expect(intakes).not.toContain("Summer 2028");
   });
 });
 

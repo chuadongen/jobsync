@@ -45,3 +45,12 @@ export const confirmWindow = async (id: string) =>
 
 export const deleteWindow = async (id: string) =>
   run((userId) => seasons.deleteWindow(userId, id), "Failed to delete the window.");
+
+export const rolloverWindow = async (id: string) =>
+  run((userId) => seasons.rolloverWindow(userId, id), "Failed to estimate next year's window.");
+
+export const rolloverAll = async () =>
+  run((userId) => seasons.rolloverAll(userId), "Failed to estimate next year's windows.");
+
+export const getRollableCount = async () =>
+  read(async (userId) => (await seasons.rollableWindows(userId)).length, "Failed to check windows.");

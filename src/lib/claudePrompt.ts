@@ -12,4 +12,4 @@ export async function copyClaudePrompt(prompt: string) {
 }
 
 export const RESEARCH_WINDOWS_PROMPT =
-  "Using my JobSync tools, research application windows for my targets. Start with list_targets, look up when applications open and close for the next intake (and the role dates), and save them with save_target_windows with a source for each. Mark anything inferred from earlier years as estimated, and tell me which ones you could not find.";
+  "Using my JobSync tools, research application windows for my targets. Start with list_targets, look up when applications open and close for the next intake (and the role dates), including any windows marked estimated that may now be announced, and save them with save_target_windows with a source for each. Mark anything inferred from earlier years as estimated, and tell me which ones you could not find.";
