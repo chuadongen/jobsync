@@ -28,7 +28,7 @@ Cover letters follow the same draft → approved → sent lifecycle.
 | Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically. Once a season closes, **Estimate next year** copies its windows forward a year (anchored on when your matching jobs actually appeared), marked as estimates for Claude to verify |
 | Interview prep | Each round on a job's timeline has your own notes plus two Claude sections: prep before the round, and a debrief after it that checks the prep against what actually happened. Earlier debriefs at the same company feed the next prep |
 | Experience Bank | Entries and bullets with tags, archive, usage warnings, Claude's suggested additions for you to accept or reject, contact details for the resume header, JSON import and export |
-| Resumes | Base and variant editor with a live A4 preview and a one-page check, reorder sections, items and bullets, see where Claude reworded a bullet and revert to the bank original |
+| Resumes | Base and variant editor with a live A4 preview and a one-page check, reorder sections, items and bullets, see where Claude reworded a bullet and revert to the bank original. New lines come only from the bank: **Add from bank** and **Add bullet from bank** list what the resume does not use yet, so to add something new, put it in the bank first |
 | Base gaps | On each base version: what that kind of role asks for across the job descriptions Claude has read, how well your bank covers each requirement, how applications sent with it fared and where they stopped, bullets with no measurable result, and Claude's written review. Small numbers are labelled as a rough guide |
 | Cover letters | Editor with preview, same approval gate |
 | Documents | Upload transcripts, certificates and testimonials into a readable folder layout; link them to applications |
@@ -57,7 +57,7 @@ Sent files are named for the recruiter (your name, then Resume or Cover Letter),
 
 ## Trying it in a Codespace
 
-No server needed: on GitHub, open the repository on this branch, then **Code → Codespaces → Create codespace**. The first start installs everything and creates the database (a few minutes); the app then opens in a new tab. Create your account, and import your bank file on the Experience Bank page.
+No server needed: on GitHub, open the repository, then **Code → Codespaces → Create codespace**. The first start installs everything and creates the database (a few minutes); the app then opens in a new tab. Create your account, and import your bank file on the Experience Bank page.
 
 The Codespace's database and files live only in that Codespace. Download a backup from **Settings → Data & Backup** before deleting it.
 
@@ -82,7 +82,7 @@ The first account you create becomes the only one; sign-up closes after that.
 3. Open a job in JobSync and press **Copy Claude Prompt**, then paste it into Claude. Claude picks a base, tailors it to the job description, saves a draft variant with notes on what it changed, and gives you the review link.
 
 Tools Claude has:
-- **Jobs:** add, find, update and search jobs; read a job's rounds and add a round you report; save prep notes and debriefs.
+- **Jobs:** add jobs (one at a time or in a batch), find, update and search them; read a job's rounds and add a round you report; save prep notes and debriefs.
 - **Seasons:** list targets; save researched application windows (as suggestions).
 - **Resumes:** read the bank, base versions and resumes; save a variant or base draft; suggest bank additions; save a cover letter draft; list documents.
 - **Gaps:** record a job's requirements and how the bank covers them (done while tailoring); read a base's gap data; save a gap review.
@@ -125,7 +125,6 @@ your laptop / phone ──tailnet, HTTPS──► tailscale serve :8443 ──�
 ```bash
 git clone https://github.com/chuadongen/jobsync.git ~/jobsync
 cd ~/jobsync
-git checkout claude/personal-rework   # or main, once merged
 ```
 
 ### 2. Pick a port and an address
@@ -201,7 +200,7 @@ Each run saves `jobsync-YYYY-MM-DD-HHMMSS.zip` (database, documents and sent PDF
 cd ~/jobsync && ./deploy.sh
 ```
 
-This pulls the branch, rebuilds and restarts. Data in `jobsync-data` is untouched; database migrations run on start.
+This pulls the checked-out branch (`main`), rebuilds and restarts. `./deploy.sh <branch>` switches to another branch first. Data in `jobsync-data` is untouched; database migrations run on start.
 
 ### Restoring a backup
 
