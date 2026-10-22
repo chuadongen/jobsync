@@ -25,6 +25,7 @@ Cover letters follow the same draft → approved → sent lifecycle.
 | Area | What it does |
 |---|---|
 | Jobs | Pipeline with Singapore-oriented sources and stages (Online Assessment, HireVue, Assessment Centre), role start and end dates, timeline of stages and interviewers, contacts, notes, tasks. An application seasons bar across the top shows when your targets take applications |
+| Interviews | Every round across all jobs in one list, searchable and filterable by round, company, stage and job status |
 | Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically. Once a season closes, **Estimate next year** copies its windows forward a year (anchored on when your matching jobs actually appeared), marked as estimates for Claude to verify |
 | Interview prep | Each round on a job's timeline has your own notes plus two Claude sections: prep before the round, and a debrief after it that checks the prep against what actually happened. Earlier debriefs at the same company feed the next prep |
 | Experience Bank | Entries and bullets with tags, archive, usage warnings, Claude's suggested additions for you to accept or reject, contact details for the resume header, JSON import and export |
@@ -33,8 +34,10 @@ Cover letters follow the same draft → approved → sent lifecycle.
 | Cover letters | Editor with preview, same approval gate |
 | Documents | Upload transcripts, certificates and testimonials into a readable folder layout; link them to applications |
 | Availability | Confirmed and tentative blocks (exchange, trips, exams) on a timeline against the role periods of open applications, with clash warnings |
+| Tasks | To-dos with due dates, linked to jobs, searchable and groupable |
+| Library | Shared lists the job forms pick from: companies (with their jobs), job titles, locations, sources, skills, contacts, contact roles and stages |
 | Dashboard | Open applications, interviews, closing dates and application windows in the next two weeks, drafts awaiting approval, suggestions to check, clashes |
-| Data | One-click backup zip of the database and every file; bank export |
+| Settings | MCP Access (tokens and client config for Claude), Data & Backup (one-click zip of the database and every file; bank export), Appearance |
 
 ## Files on disk
 
