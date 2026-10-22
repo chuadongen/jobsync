@@ -71,7 +71,7 @@ export function HeaderForm({
             <Label>Links</Label>
             {form.links.map((link, i) => (
               <div key={i} className="flex gap-2">
-                <Input aria-label="Link label" className="w-32" value={link.label} placeholder="LinkedIn" onChange={(e) => setLink(i, "label", e.target.value)} />
+                <Input aria-label="Link label" className="w-32" required={!!link.url.trim()} value={link.label} placeholder="LinkedIn" onChange={(e) => setLink(i, "label", e.target.value)} />
                 <Input aria-label="Link URL" value={link.url} placeholder="linkedin.com/in/…" onChange={(e) => setLink(i, "url", e.target.value)} />
                 <Button
                   type="button"
