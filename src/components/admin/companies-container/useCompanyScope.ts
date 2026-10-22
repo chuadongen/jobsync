@@ -2,31 +2,13 @@
 
 import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { JobBoard } from "@/models/automation.model";
 
-export type CompanyScope =
-  | "mine"
-  | "watchlist"
-  | "board:greenhouse"
-  | "board:lever"
-  | "board:ashby";
+export type CompanyScope = "mine" | "watchlist";
 
-const SCOPES: CompanyScope[] = [
-  "mine",
-  "watchlist",
-  "board:greenhouse",
-  "board:lever",
-  "board:ashby",
-];
-
-export function boardProvider(scope: CompanyScope): JobBoard | null {
-  return scope.startsWith("board:")
-    ? (scope.slice("board:".length) as JobBoard)
-    : null;
-}
+const SCOPES: CompanyScope[] = ["mine", "watchlist"];
 
 // Owns ?scope= directly rather than hoisting it into AdminTabsContainer,
-// which is shared by all six tabs. Safe to have two writers on one query
+// which is shared by all the tabs. Safe to have two writers on one query
 // string: each only sets its own key and rebuilds from the current params.
 export function useCompanyScope() {
   const router = useRouter();

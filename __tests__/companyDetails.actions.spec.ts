@@ -5,7 +5,7 @@ import prisma from "@/lib/db";
 vi.mock("@/lib/db", () => ({
   default: {
     company: { findFirst: vi.fn() },
-    job: { findMany: vi.fn(), count: vi.fn() },
+    job: { findMany: vi.fn() },
     contact: { findMany: vi.fn() },
   },
 }));
@@ -29,7 +29,6 @@ describe("getCompanyDetails", () => {
     (getCurrentUser as any).mockResolvedValue(user);
     db.company.findFirst.mockResolvedValue(company);
     db.job.findMany.mockResolvedValue([]);
-    db.job.count.mockResolvedValue(0);
     db.contact.findMany.mockResolvedValue([]);
   });
 
@@ -51,75 +50,31 @@ describe("getCompanyDetails", () => {
       companyId: "co1",
       userId: user.id,
     });
-    expect(db.job.count.mock.calls[0][0].where).toMatchObject({
-      companyId: "co1",
-      userId: user.id,
-    });
     expect(db.contact.findMany.mock.calls.map((c: any) => c[0].where)).toEqual([
       { companyId: "co1", createdBy: user.id },
       { workedAtCompanyId: "co1", createdBy: user.id },
     ]);
   });
 
-  it("lists jobs newest first and leaves dismissed jobs out", async () => {
+  it("lists jobs newest first", async () => {
     await getCompanyDetails("co1");
 
     const args = db.job.findMany.mock.calls[0][0];
     expect(args.orderBy).toEqual({ createdAt: "desc" });
-    expect(args.where.OR).toEqual([
-      { discoveryStatus: null },
-      { discoveryStatus: { not: "dismissed" } },
-    ]);
-  });
-
-  it("counts dismissed jobs separately so the delete check still sees them", async () => {
-    db.job.count.mockResolvedValue(3);
-
-    const result = await getCompanyDetails("co1");
-
-    expect(db.job.count.mock.calls[0][0].where).toEqual({
-      companyId: "co1",
-      userId: user.id,
-      discoveryStatus: "dismissed",
-    });
-    expect(result.dismissedJobsCount).toBe(3);
+    expect(args.where).toEqual({ companyId: "co1", userId: user.id });
   });
 
   it("derives appliedCount from the applied flag", async () => {
     db.job.findMany.mockResolvedValue([
-      { id: "j1", applied: true, matchScore: null, matchData: null },
-      { id: "j2", applied: false, matchScore: null, matchData: null },
-      { id: "j3", applied: true, matchScore: null, matchData: null },
+      { id: "j1", applied: true },
+      { id: "j2", applied: false },
+      { id: "j3", applied: true },
     ]);
 
     const result = await getCompanyDetails("co1");
 
     expect(result.appliedCount).toBe(2);
     expect(result.jobs).toHaveLength(3);
-  });
-
-  it("hides the pre-rank score of an un-analyzed job and drops matchData", async () => {
-    db.job.findMany.mockResolvedValue([
-      {
-        id: "j1",
-        applied: false,
-        matchScore: 29,
-        matchData: JSON.stringify({ analyzed: false }),
-      },
-      {
-        id: "j2",
-        applied: false,
-        matchScore: 71,
-        matchData: JSON.stringify({ matchScore: 71 }),
-      },
-    ]);
-
-    const result = await getCompanyDetails("co1");
-
-    expect(result.jobs).toEqual([
-      { id: "j1", applied: false, matchScore: null },
-      { id: "j2", applied: false, matchScore: 71 },
-    ]);
   });
 
   it("returns the company with its two contact groups", async () => {

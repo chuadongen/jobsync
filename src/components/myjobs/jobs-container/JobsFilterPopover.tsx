@@ -21,7 +21,6 @@ import {
 import { useJobFilterCounts } from "./useJobFilterCounts";
 
 const STATUS_ORDER: string[] = JOB_STATUSES.map((s) => s.value);
-const ACCEPTED_LABEL = "Accepted (discovered)";
 const SECTION_LABEL =
   "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
@@ -56,9 +55,9 @@ export function JobsFilterPopover({
   const orderedStatuses = [...statuses].sort(
     (a, b) => STATUS_ORDER.indexOf(a.value) - STATUS_ORDER.indexOf(b.value),
   );
-  const allStatusesPicked =
-    orderedStatuses.every((s) => draft.statuses.includes(s.value)) &&
-    draft.acceptedDiscovered;
+  const allStatusesPicked = orderedStatuses.every((s) =>
+    draft.statuses.includes(s.value),
+  );
 
   const onOpenChange = (next: boolean) => {
     // Re-seed on every open so a closed-without-apply draft is discarded.
@@ -74,12 +73,8 @@ export function JobsFilterPopover({
   const toggleAllStatuses = () =>
     setDraft((d) =>
       allStatusesPicked
-        ? { ...d, statuses: [], acceptedDiscovered: false }
-        : {
-            ...d,
-            statuses: orderedStatuses.map((s) => s.value),
-            acceptedDiscovered: true,
-          },
+        ? { ...d, statuses: [] }
+        : { ...d, statuses: orderedStatuses.map((s) => s.value) },
     );
 
   const total = counts?.total;
@@ -184,17 +179,6 @@ export function JobsFilterPopover({
                     })),
                 ),
               )}
-              {statusRow(
-                "accepted",
-                ACCEPTED_LABEL,
-                draft.acceptedDiscovered,
-                counts?.acceptedDiscovered,
-                () =>
-                  setDraft((d) => ({
-                    ...d,
-                    acceptedDiscovered: !d.acceptedDiscovered,
-                  })),
-              )}
             </div>
           </div>
           <div className="flex flex-col gap-2.5 border-b px-4 py-3">
@@ -212,18 +196,6 @@ export function JobsFilterPopover({
               })),
             )}
           </div>
-          <label className="flex cursor-pointer items-center gap-2 border-b px-4 py-3 text-[13px]">
-            <input
-              type="checkbox"
-              className="h-4 w-4 shrink-0"
-              aria-label="Include dismissed discovered jobs"
-              checked={draft.includeDismissed}
-              onChange={() =>
-                setDraft((d) => ({ ...d, includeDismissed: !d.includeDismissed }))
-              }
-            />
-            <span>Include dismissed discovered jobs</span>
-          </label>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
           <Button

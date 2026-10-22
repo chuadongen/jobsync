@@ -4,14 +4,12 @@ import {
   stageInitials,
   isInterviewStage,
   terminalStagesFor,
-  askedTally,
 } from "@/components/myjobs/job-details/timeline/stageDisplay";
 
 const stage = (over: any = {}) => ({
   id: "s1",
   occurredAt: null,
   durationMins: null,
-  prepQuestions: [],
   StageType: { id: "t1", value: "offer", sortOrder: 7, Status: { value: "offer" } },
   ...over,
 });
@@ -100,14 +98,3 @@ describe("terminalStagesFor", () => {
   });
 });
 
-describe("askedTally", () => {
-  it("counts asked out of total", () => {
-    expect(
-      askedTally(
-        stage({
-          prepQuestions: [{ asked: true }, { asked: true }, { asked: false }, { asked: false }],
-        }) as any,
-      ),
-    ).toEqual({ asked: 2, total: 4 });
-  });
-});

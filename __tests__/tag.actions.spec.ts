@@ -21,12 +21,6 @@ vi.mock("@prisma/client", () => {
     job: {
       count: vi.fn(),
     },
-    question: {
-      count: vi.fn(),
-    },
-    skill: {
-      count: vi.fn(),
-    },
   };
   return { PrismaClient: vi.fn(function() { return mPrismaClient; }) };
 });
@@ -93,7 +87,7 @@ describe("Tag Actions", () => {
   describe("getTagList", () => {
     it("should return paginated tag list with counts", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      const mockData = [{ ...mockTag, _count: { jobs: 3, questions: 2 } }];
+      const mockData = [{ ...mockTag, _count: { jobs: 3 } }];
       (prisma.tag.findMany as any).mockResolvedValue(mockData);
       (prisma.tag.count as any).mockResolvedValue(1);
 
@@ -144,7 +138,7 @@ describe("Tag Actions", () => {
 
     it("should filter tags by label when search is provided", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      const mockData = [{ ...mockTag, _count: { jobs: 3, questions: 2 } }];
+      const mockData = [{ ...mockTag, _count: { jobs: 3 } }];
       (prisma.tag.findMany as any).mockResolvedValue(mockData);
       (prisma.tag.count as any).mockResolvedValue(1);
 
@@ -244,11 +238,9 @@ describe("Tag Actions", () => {
 
   // deleteTagById
   describe("deleteTagById", () => {
-    it("should delete a tag that has no linked jobs or questions", async () => {
+    it("should delete a tag that has no linked jobs", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
       (prisma.job.count as any).mockResolvedValue(0);
-      (prisma.question.count as any).mockResolvedValue(0);
-      (prisma.skill.count as any).mockResolvedValue(0);
       (prisma.tag.delete as any).mockResolvedValue(mockTag);
 
       const result = await deleteTagById("tag-1");
@@ -262,8 +254,6 @@ describe("Tag Actions", () => {
     it("should return error when tag is linked to jobs only", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
       (prisma.job.count as any).mockResolvedValue(3);
-      (prisma.question.count as any).mockResolvedValue(0);
-      (prisma.skill.count as any).mockResolvedValue(0);
 
       const result = await deleteTagById("tag-1");
 
@@ -275,54 +265,6 @@ describe("Tag Actions", () => {
       expect(prisma.tag.delete).not.toHaveBeenCalled();
     });
 
-    it("should return error when tag is linked to questions only", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.count as any).mockResolvedValue(0);
-      (prisma.question.count as any).mockResolvedValue(5);
-      (prisma.skill.count as any).mockResolvedValue(0);
-
-      const result = await deleteTagById("tag-1");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Skill tag cannot be deleted because it is linked to 5 question(s).",
-      });
-      expect(prisma.tag.delete).not.toHaveBeenCalled();
-    });
-
-    it("should return error when tag is linked to both jobs and questions", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.count as any).mockResolvedValue(2);
-      (prisma.question.count as any).mockResolvedValue(4);
-      (prisma.skill.count as any).mockResolvedValue(0);
-
-      const result = await deleteTagById("tag-1");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Skill tag cannot be deleted because it is linked to 2 job(s) and 4 question(s).",
-      });
-      expect(prisma.tag.delete).not.toHaveBeenCalled();
-    });
-
-    it("should return error when tag is linked to skills only", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.count as any).mockResolvedValue(0);
-      (prisma.question.count as any).mockResolvedValue(0);
-      (prisma.skill.count as any).mockResolvedValue(2);
-
-      const result = await deleteTagById("tag-1");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Skill tag cannot be deleted because it is linked to 2 skill(s).",
-      });
-      expect(prisma.tag.delete).not.toHaveBeenCalled();
-    });
-
     it("should return error for unauthenticated user", async () => {
       (getCurrentUser as any).mockResolvedValue(null);
 
@@ -330,15 +272,12 @@ describe("Tag Actions", () => {
 
       expect(result).toEqual({ success: false, message: "Not authenticated" });
       expect(prisma.job.count).not.toHaveBeenCalled();
-      expect(prisma.question.count).not.toHaveBeenCalled();
       expect(prisma.tag.delete).not.toHaveBeenCalled();
     });
 
     it("should handle database errors during deletion", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
       (prisma.job.count as any).mockResolvedValue(0);
-      (prisma.question.count as any).mockResolvedValue(0);
-      (prisma.skill.count as any).mockResolvedValue(0);
       (prisma.tag.delete as any).mockRejectedValue(new Error("DB error"));
 
       const result = await deleteTagById("tag-1");

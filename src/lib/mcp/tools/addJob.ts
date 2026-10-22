@@ -3,7 +3,6 @@ import { McpAddJobSchema } from "@/models/mcp.schema";
 import { createJobFromNames } from "@/lib/jobs/createJobFromNames";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
-import { buildMatchOffer, composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
 
 export async function handleAddJob(
   input: z.infer<typeof McpAddJobSchema>,
@@ -30,20 +29,11 @@ export async function handleAddJob(
       }
       const text =
         result.message +
-        " No match offered for duplicates — pass upsert: true (or call update_job)" +
-        " to enrich the existing record instead.";
+        " Pass upsert: true (or call update_job) to enrich the existing record instead.";
       return { content: [{ type: "text", text }] };
     }
 
-    const offer = await buildMatchOffer(
-      result.jobId,
-      userId,
-      result.descriptionCompleteness ?? "title-only",
-      "add",
-    );
-    return {
-      content: [{ type: "text", text: composeOfferMessage(result.message, offer) }],
-    };
+    return { content: [{ type: "text", text: result.message }] };
   } catch (err: any) {
     return {
       content: [{ type: "text", text: `Error: ${err?.message ?? "Unknown error"}` }],
@@ -61,18 +51,5 @@ async function upsertExisting(
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
   const { upsert, allowDuplicate, ...fields } = input;
   const result = await updateJobFromNames({ jobId, ...fields }, userId);
-
-  if (!result.updated || !result.descriptionChanged) {
-    return { content: [{ type: "text", text: result.message }] };
-  }
-
-  const offer = await buildMatchOffer(
-    result.jobId,
-    userId,
-    result.descriptionCompleteness ?? "title-only",
-    "update",
-  );
-  return {
-    content: [{ type: "text", text: composeOfferMessage(result.message, offer) }],
-  };
+  return { content: [{ type: "text", text: result.message }] };
 }

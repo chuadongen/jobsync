@@ -1,10 +1,8 @@
 "use client";
 import Link from "next/link";
 import {
-  Check,
   ChevronDown,
   ChevronRight,
-  Circle,
   ExternalLink,
   MapPin,
   MoreVertical,
@@ -32,7 +30,6 @@ import {
   interviewerSummary,
   outcomeLabel,
   outcomeColor,
-  prepSummary,
   whenParts,
 } from "./interviewDisplay";
 import { setStageOutcome } from "@/actions/jobStage.actions";
@@ -124,9 +121,6 @@ function InterviewRow({
         <TableCell className="hidden lg:table-cell">
           {interviewerSummary(interview.interviewers)}
         </TableCell>
-        <TableCell className="hidden sm:table-cell">
-          {prepSummary(interview.prepQuestions)}
-        </TableCell>
         <TableCell>
           <StatusBadge
             label={outcome}
@@ -186,8 +180,8 @@ function InterviewRow({
       </TableRow>
       {expanded && (
         <TableRow>
-          <TableCell colSpan={9} className="bg-muted/40">
-            <div className="grid gap-6 text-sm sm:grid-cols-2">
+          <TableCell colSpan={8} className="bg-muted/40">
+            <div className="grid gap-6 text-sm">
               <div className="space-y-4">
                 <div>
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -233,45 +227,6 @@ function InterviewRow({
                       {interview.notes}
                     </p>
                   </div>
-                )}
-              </div>
-              <div>
-                <div className="flex items-baseline gap-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Prep questions ({prepSummary(interview.prepQuestions)})
-                  </div>
-                  {interview.prepQuestions.length > 0 && (
-                    <Link
-                      href={`/dashboard/questions?stage=${interview.id}`}
-                      className="whitespace-nowrap text-xs text-primary underline-offset-4 hover:underline"
-                    >
-                      View answers
-                    </Link>
-                  )}
-                </div>
-                {interview.prepQuestions.length === 0 ? (
-                  <p className="mt-1 text-muted-foreground">
-                    No prep list yet — build one on the job&apos;s Timeline tab.
-                  </p>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {interview.prepQuestions.map((link) => (
-                      <li key={link.id} className="flex items-start gap-2">
-                        {link.asked ? (
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" />
-                        ) : (
-                          <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        )}
-                        <span
-                          className={
-                            link.asked ? "text-muted-foreground" : undefined
-                          }
-                        >
-                          {link.Question.question}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
                 )}
               </div>
             </div>

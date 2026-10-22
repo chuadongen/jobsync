@@ -3,10 +3,10 @@ import { canonicalizeEntityValue } from "@/lib/jobs/canonicalize";
 import { JOB_STATUS_BADGE_COLORS } from "@/lib/badge-colors";
 
 describe("JOB_STAGES", () => {
-  it("has fourteen entries with unique values and sequential sortOrder", () => {
-    expect(JOB_STAGES).toHaveLength(14);
+  it("has seventeen entries with unique values and sequential sortOrder", () => {
+    expect(JOB_STAGES).toHaveLength(17);
     const values = JOB_STAGES.map((s) => s.value);
-    expect(new Set(values).size).toBe(14);
+    expect(new Set(values).size).toBe(17);
     expect(JOB_STAGES.map((s) => s.sortOrder)).toEqual(
       JOB_STAGES.map((_, i) => i),
     );

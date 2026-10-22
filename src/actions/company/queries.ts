@@ -5,7 +5,6 @@ import { APP_CONSTANTS } from "@/lib/constants";
 import { requireUser } from "../shared";
 import { getReferenceEntityList } from "../referenceList";
 import { CONTACT_LIST_INCLUDE } from "../contact/shared";
-import { hideUnanalyzedScore } from "../job/shared";
 
 export const getCompanyList = async (
   page: number = 1,
@@ -28,9 +27,6 @@ export const getCompanyList = async (
         logoUrl: true,
         watched: true,
         watchedAt: true,
-        atsProvider: true,
-        atsToken: true,
-        atsHost: true,
       },
       extraCounts: [
         { key: "jobsRejected", where: { Status: { value: "rejected" } } },
@@ -46,7 +42,7 @@ export const getCompanyList = async (
             orderBy: [{ watchedAt: "desc" }, { label: "asc" }],
           }
         : {}),
-      searchFields: ["label", "atsToken"],
+      searchFields: ["label"],
       page,
       limit,
       countBy,
@@ -104,8 +100,6 @@ const COMPANY_JOB_SELECT = {
   createdAt: true,
   applied: true,
   appliedDate: true,
-  matchScore: true,
-  matchData: true,
   JobTitle: { select: { label: true } },
   Status: { select: { label: true, value: true } },
   Location: { select: { label: true } },
@@ -113,8 +107,7 @@ const COMPANY_JOB_SELECT = {
 };
 
 // null covers both a missing id and another user's company, so the page's 404
-// never reveals which. Dismissed jobs are hidden like on the Jobs page, but
-// counted, because deleteCompanyById's job guard still sees them.
+// never reveals which.
 export const getCompanyDetails = async (
   companyId: string,
 ): Promise<any | undefined> => {
@@ -126,22 +119,12 @@ export const getCompanyDetails = async (
     });
     if (!company) return null;
 
-    const [jobs, dismissedJobsCount, currentContacts, formerContacts] =
+    const [jobs, currentContacts, formerContacts] =
       await Promise.all([
         prisma.job.findMany({
-          where: {
-            companyId,
-            userId: user.id,
-            OR: [
-              { discoveryStatus: null },
-              { discoveryStatus: { not: "dismissed" } },
-            ],
-          },
+          where: { companyId, userId: user.id },
           select: COMPANY_JOB_SELECT,
           orderBy: { createdAt: "desc" },
-        }),
-        prisma.job.count({
-          where: { companyId, userId: user.id, discoveryStatus: "dismissed" },
         }),
         prisma.contact.findMany({
           where: { companyId, createdBy: user.id },
@@ -155,13 +138,10 @@ export const getCompanyDetails = async (
         }),
       ]);
 
-    const visibleJobs = jobs.map(hideUnanalyzedScore);
-
     return {
       ...company,
-      jobs: visibleJobs,
-      appliedCount: visibleJobs.filter((job) => job.applied).length,
-      dismissedJobsCount,
+      jobs,
+      appliedCount: jobs.filter((job) => job.applied).length,
       currentContacts,
       formerContacts,
     };

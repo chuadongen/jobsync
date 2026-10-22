@@ -15,12 +15,6 @@ vi.mock("@prisma/client", () => {
       count: vi.fn(),
       delete: vi.fn(),
     },
-    workExperience: {
-      count: vi.fn(),
-    },
-    education: {
-      count: vi.fn(),
-    },
     contact: {
       count: vi.fn(),
     },
@@ -220,8 +214,6 @@ describe("Job Location Actions", () => {
 
     it("should delete a location successfully", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.education.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       const mockDeleted = { id: "loc-1", label: "New York" };
       (prisma.location.delete as any).mockResolvedValue(mockDeleted);
@@ -243,41 +235,8 @@ describe("Job Location Actions", () => {
       expect(prisma.location.delete).not.toHaveBeenCalled();
     });
 
-    it("should prevent deletion when work experiences exist", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(1);
-
-      const result = await deleteJobLocationById("loc-1");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Job location cannot be deleted due to its use in experience section of one of the resume! ",
-      });
-      expect(prisma.education.count).not.toHaveBeenCalled();
-      expect(prisma.location.delete).not.toHaveBeenCalled();
-    });
-
-    it("should prevent deletion when education records exist", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.education.count as any).mockResolvedValue(2);
-
-      const result = await deleteJobLocationById("loc-1");
-
-      expect(result).toEqual({
-        success: false,
-        message:
-          "Job location cannot be deleted due to its use in education section of one of the resume! ",
-      });
-      expect(prisma.job.count).not.toHaveBeenCalled();
-      expect(prisma.location.delete).not.toHaveBeenCalled();
-    });
-
     it("should prevent deletion when associated jobs exist", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.education.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(5);
 
       const result = await deleteJobLocationById("loc-1");
@@ -292,8 +251,6 @@ describe("Job Location Actions", () => {
 
     it("refuses to delete a location a contact points at", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.education.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       (prisma.contact.count as any).mockResolvedValue(1);
 
@@ -308,8 +265,6 @@ describe("Job Location Actions", () => {
 
     it("should handle unexpected errors", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.workExperience.count as any).mockResolvedValue(0);
-      (prisma.education.count as any).mockResolvedValue(0);
       (prisma.job.count as any).mockResolvedValue(0);
       (prisma.location.delete as any).mockRejectedValue(
         new Error("Delete failed")

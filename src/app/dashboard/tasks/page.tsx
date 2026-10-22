@@ -1,20 +1,12 @@
-import TasksPageClient from "./TasksPageClient";
-import { getAllActivityTypes } from "@/actions/activity.actions";
-import { getActivityTypesWithTaskCounts } from "@/actions/task.actions";
-import React from "react";
+import TasksContainer from "@/components/tasks/TasksContainer";
 
-async function Tasks() {
-  const [activityTypes, activityTypesWithCounts] = await Promise.all([
-    getAllActivityTypes(),
-    getActivityTypesWithTaskCounts(),
-  ]);
-
+function Tasks() {
   return (
-    <TasksPageClient
-      activityTypes={activityTypes || []}
-      activityTypesWithCounts={activityTypesWithCounts?.data || []}
-      totalTasks={activityTypesWithCounts?.totalTasks || 0}
-    />
+    <div className="col-span-3 flex h-full">
+      <div className="flex-1">
+        <TasksContainer />
+      </div>
+    </div>
   );
 }
 

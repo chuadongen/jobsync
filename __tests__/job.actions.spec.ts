@@ -8,7 +8,6 @@ import {
   getJobFilterCounts,
   getJobSourceList,
   getStatusList,
-  saveJobMatchResult,
   updateJob,
   updateJobStatus,
 } from "@/actions/job.actions";
@@ -54,8 +53,6 @@ vi.mock("@prisma/client", () => {
     },
     jobTitle: { count: vi.fn() },
     company: { count: vi.fn() },
-    resume: { count: vi.fn() },
-    coverLetter: { count: vi.fn() },
     tag: { count: vi.fn() },
     jobStage: {
       findFirst: vi.fn(),
@@ -109,7 +106,6 @@ describe("jobActions", () => {
     jobUrl: "https://example.com/job",
     applied: true,
     userId: mockUser.id,
-    resume: "",
     tags: [],
   };
   const refModels = [
@@ -117,8 +113,6 @@ describe("jobActions", () => {
     "company",
     "location",
     "jobSource",
-    "resume",
-    "coverLetter",
     "tag",
   ];
   beforeEach(() => {
@@ -224,31 +218,6 @@ describe("jobActions", () => {
       expect(prisma.job.findMany).toHaveBeenCalledTimes(1);
       expect(prisma.job.count).toHaveBeenCalledTimes(1);
     });
-    it("should hide the pre-rank score of un-analyzed jobs and drop matchData", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.findMany as any).mockResolvedValue([
-        {
-          id: "unanalyzed",
-          matchScore: 28,
-          matchData: JSON.stringify({ prerankScore: 0.29, analyzed: false }),
-        },
-        {
-          id: "analyzed",
-          matchScore: 71,
-          matchData: JSON.stringify({ matchScore: 71, body: "## Summary" }),
-        },
-        { id: "unmatched", matchScore: null, matchData: null },
-      ]);
-      (prisma.job.count as any).mockResolvedValue(3);
-
-      const result = await getJobsList();
-
-      expect(result.data).toStrictEqual([
-        { id: "unanalyzed", matchScore: null },
-        { id: "analyzed", matchScore: 71 },
-        { id: "unmatched", matchScore: null },
-      ]);
-    });
     it("should return error when fetching data fails", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
 
@@ -309,27 +278,6 @@ describe("jobActions", () => {
         );
       });
 
-      it("pages real match scores first, then unscored jobs by newest", async () => {
-        (prisma.job.count as any)
-          .mockResolvedValueOnce(1)
-          .mockResolvedValueOnce(1);
-        (prisma.job.findMany as any)
-          .mockResolvedValueOnce([{ id: "scored", matchScore: 80, matchData: "{}" }])
-          .mockResolvedValueOnce([{ id: "unmatched", matchScore: null, matchData: null }]);
-
-        const result = await getJobsList(...sortArgs({ field: "matchScore", dir: "desc" }));
-
-        expect(result.total).toBe(2);
-        expect(result.data.map((j: any) => j.id)).toEqual(["scored", "unmatched"]);
-        const [valuedCall, blankCall] = (prisma.job.findMany as any).mock.calls;
-        expect(valuedCall[0].orderBy).toEqual([{ matchScore: "desc" }, ...BASE]);
-        expect(blankCall[0].orderBy).toEqual(BASE);
-        // The dismissed-hiding AND survives, with the partition appended.
-        expect(valuedCall[0].where.AND).toHaveLength(2);
-        expect(valuedCall[0].where.AND[1]).toMatchObject({
-          matchScore: { not: null },
-        });
-      });
     });
 
     describe("facets", () => {
@@ -341,29 +289,18 @@ describe("jobActions", () => {
         (prisma.job.count as any).mockResolvedValue(0);
       });
 
-      it("hides dismissed discovered jobs by default", async () => {
+      it("applies no facet conditions by default", async () => {
         await getJobsList(1, 10);
-        expect(whereOf().AND).toEqual([
-          {
-            OR: [
-              { discoveryStatus: null },
-              { discoveryStatus: { not: "dismissed" } },
-            ],
-          },
-        ]);
+        expect(whereOf().AND).toEqual([]);
       });
 
-      it("ORs statuses with accepted-discovered inside one AND entry", async () => {
+      it("filters statuses as an `in` list", async () => {
         await getJobsList(1, 10, {
           ...EMPTY_JOB_FACETS,
           statuses: ["applied", "interview"],
-          acceptedDiscovered: true,
         });
         expect(whereOf().AND).toContainEqual({
-          OR: [
-            { Status: { value: { in: ["applied", "interview"] } } },
-            { discoveryStatus: "accepted" },
-          ],
+          Status: { value: { in: ["applied", "interview"] } },
         });
       });
 
@@ -381,17 +318,12 @@ describe("jobActions", () => {
         );
       });
 
-      it("drops the dismissed exclusion when dismissed jobs are included", async () => {
-        await getJobsList(1, 10, { ...EMPTY_JOB_FACETS, includeDismissed: true });
-        expect(whereOf().AND).toEqual([]);
-      });
-
       it("keeps the search OR alongside the status OR", async () => {
         await getJobsList(1, 10, { ...EMPTY_JOB_FACETS, statuses: ["applied"] }, "Developer");
         const where = whereOf();
         expect(where.OR).toContainEqual({ description: { contains: "Developer" } });
         expect(where.AND).toContainEqual({
-          OR: [{ Status: { value: { in: ["applied"] } } }],
+          Status: { value: { in: ["applied"] } },
         });
       });
 
@@ -401,7 +333,7 @@ describe("jobActions", () => {
           statuses: ["bogus"],
           jobTypes: ["fulltime"],
         });
-        expect(whereOf().AND).toHaveLength(1);
+        expect(whereOf().AND).toHaveLength(0);
       });
 
       it("always scopes by the current user", async () => {
@@ -554,7 +486,7 @@ describe("jobActions", () => {
           OR: expect.any(Array),
         });
         expect(findManyCall.where.AND).toContainEqual({
-          OR: [{ Status: { value: { in: ["applied"] } } }],
+          Status: { value: { in: ["applied"] } },
         });
       });
 
@@ -707,7 +639,7 @@ describe("jobActions", () => {
           applied: true,
         });
         expect(findManyCall.where.AND).toContainEqual({
-          OR: [{ Status: { value: { in: ["applied"] } } }],
+          Status: { value: { in: ["applied"] } },
         });
       });
 
@@ -977,9 +909,7 @@ describe("jobActions", () => {
     // Queued per test, not in beforeEach: clearMocks keeps unused Once values,
     // so the unauthenticated test would leak them into later describes.
     const queueCounts = () =>
-      (prisma.job.count as any)
-        .mockResolvedValueOnce(18)
-        .mockResolvedValueOnce(7);
+      (prisma.job.count as any).mockResolvedValueOnce(18);
 
     beforeEach(() => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
@@ -989,7 +919,7 @@ describe("jobActions", () => {
       ]);
     });
 
-    it("returns the total, per-status counts and the accepted count", async () => {
+    it("returns the total and per-status counts", async () => {
       queueCounts();
       const result = await getJobFilterCounts({
         ...EMPTY_JOB_FACETS,
@@ -1000,7 +930,6 @@ describe("jobActions", () => {
         data: {
           total: 18,
           statusCounts: { "s-applied": 11, "s-interview": 4 },
-          acceptedDiscovered: 7,
         },
       });
     });
@@ -1031,9 +960,6 @@ describe("jobActions", () => {
         applied: true,
       });
       expect(totalWhere.OR).toContainEqual({ description: { contains: "Dev" } });
-      const acceptedWhere = (prisma.job.count as any).mock.calls[1][0].where;
-      expect(acceptedWhere.AND[1]).toEqual({ discoveryStatus: "accepted" });
-      expect(acceptedWhere.AND[0].userId).toBe(mockUser.id);
     });
 
     it("returns Not authenticated without a session", async () => {
@@ -1077,13 +1003,19 @@ describe("jobActions", () => {
         JobSource: true,
         JobTitle: true,
         Company: true,
-        CoverLetter: true,
         Status: true,
         Location: true,
-        Resume: {
-          include: {
-            File: true,
-          },
+        resumeDocs: {
+          select: { id: true, name: true, status: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+        },
+        coverLetters: {
+          select: { id: true, title: true, status: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+        },
+        documents: {
+          select: { id: true, title: true, category: true, fileName: true },
+          orderBy: { uploadedAt: "desc" },
         },
         tags: true,
         contactLinks: {
@@ -1119,19 +1051,6 @@ describe("jobActions", () => {
                     linkedinUrl: true,
                     lastContactedAt: true,
                     Company: { select: { id: true, label: true } },
-                  },
-                },
-              },
-              orderBy: { createdAt: "asc" },
-            },
-            prepQuestions: {
-              include: {
-                Question: {
-                  select: {
-                    id: true,
-                    question: true,
-                    answer: true,
-                    tags: true,
                   },
                 },
               },
@@ -1320,7 +1239,8 @@ describe("jobActions", () => {
           userId: mockUser.id,
           jobUrl: jobData.jobUrl,
           applied: jobData.applied,
-          resumeId: jobData.resume,
+          startDate: null,
+          endDate: null,
           stages: {
             create: {
               stageTypeId: "stage-type-id",
@@ -1355,7 +1275,8 @@ describe("jobActions", () => {
           description: jobData.jobDescription,
           jobType: jobData.type,
           userId: mockUser.id,
-          resumeId: jobData.resume,
+          startDate: null,
+          endDate: null,
           stages: {
             create: {
               stageTypeId: "stage-type-id",
@@ -1415,14 +1336,11 @@ describe("jobActions", () => {
 
       await addJob({
         ...jobData,
-        resume: "resume-id",
-        coverLetter: "letter-id",
         tags: ["tag-1", "tag-1"],
       });
 
       const db = prisma as any;
       const owned = { createdBy: mockUser.id };
-      const inProfile = { profile: { userId: mockUser.id } };
       expect(db.jobTitle.count).toHaveBeenCalledWith({
         where: { id: "job-title-id", ...owned },
       });
@@ -1435,12 +1353,6 @@ describe("jobActions", () => {
       expect(db.jobSource.count).toHaveBeenCalledWith({
         where: { id: "source-id", ...owned },
       });
-      expect(db.resume.count).toHaveBeenCalledWith({
-        where: { id: "resume-id", ...inProfile },
-      });
-      expect(db.coverLetter.count).toHaveBeenCalledWith({
-        where: { id: "letter-id", ...inProfile },
-      });
       expect(db.tag.count).toHaveBeenCalledWith({
         where: { id: { in: ["tag-1"] }, ...owned },
       });
@@ -1448,8 +1360,6 @@ describe("jobActions", () => {
     });
     it.each([
       ["company", {}, "Company not found"],
-      ["resume", { resume: "resume-id" }, "Resume not found"],
-      ["coverLetter", { coverLetter: "letter-id" }, "Cover letter not found"],
     ])("rejects another user's %s", async (model, overrides, message) => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
       (prisma as any)[model].count.mockResolvedValue(0);
@@ -1467,13 +1377,12 @@ describe("jobActions", () => {
       expect(result).toStrictEqual({ success: false, message: "Tag not found" });
       expect(prisma.job.create).not.toHaveBeenCalled();
     });
-    it("skips the check for a resume that was not picked", async () => {
+    it("skips the tag check when no tags were picked", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
       (prisma.job.create as any).mockResolvedValue(jobData);
 
       await addJob(jobData);
 
-      expect((prisma as any).resume.count).not.toHaveBeenCalled();
       expect((prisma as any).tag.count).not.toHaveBeenCalled();
     });
   });
@@ -1483,8 +1392,6 @@ describe("jobActions", () => {
       companyId: "company-id",
       locationId: "location-id",
       jobSourceId: "source-id",
-      resumeId: null,
-      coverLetterId: null,
       statusId: "status-id",
       tags: [{ id: "tag-1" }],
     };
@@ -1517,18 +1424,6 @@ describe("jobActions", () => {
         success: false,
         message: "Company not found",
       });
-      expect(prisma.job.update).not.toHaveBeenCalled();
-    });
-    it.each([
-      ["resume", { resume: "resume-id" }, "Resume not found"],
-      ["coverLetter", { coverLetter: "letter-id" }, "Cover letter not found"],
-    ])("rejects another user's %s", async (model, overrides, message) => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma as any)[model].count.mockResolvedValue(0);
-
-      const result = await updateJob({ ...jobData, ...overrides });
-
-      expect(result).toStrictEqual({ success: false, message });
       expect(prisma.job.update).not.toHaveBeenCalled();
     });
     it("checks only the tags being added", async () => {
@@ -1771,59 +1666,6 @@ describe("jobActions", () => {
       await expect(deleteJobById("job-id")).resolves.toStrictEqual({
         success: false,
         message: "Unexpected error",
-      });
-    });
-  });
-  describe("saveJobMatchResult", () => {
-    it("should return error when user is not authenticated", async () => {
-      (getCurrentUser as any).mockResolvedValue(null);
-
-      const result = await saveJobMatchResult(
-        "job-id",
-        85,
-        '{"summary":"test"}',
-      );
-
-      expect(result).toStrictEqual({
-        success: false,
-        message: "Not authenticated",
-      });
-      expect(prisma.job.update).not.toHaveBeenCalled();
-    });
-
-    it("should save match score and data successfully", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.update as any).mockResolvedValue({});
-
-      const matchData = JSON.stringify({
-        matchScore: 85,
-        summary: "Good match",
-        resumeId: "resume-1",
-        resumeTitle: "My Resume",
-        matchedAt: "2026-03-29T00:00:00.000Z",
-      });
-
-      const result = await saveJobMatchResult("job-id", 85, matchData);
-
-      expect(result).toStrictEqual({ success: true });
-      expect(prisma.job.update).toHaveBeenCalledTimes(1);
-      expect(prisma.job.update).toHaveBeenCalledWith({
-        where: { id: "job-id", userId: mockUser.id },
-        data: { matchScore: 85, matchData },
-      });
-    });
-
-    it("should handle database errors", async () => {
-      (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.update as any).mockRejectedValue(
-        new Error("Record not found"),
-      );
-
-      const result = await saveJobMatchResult("job-id", 75, "{}");
-
-      expect(result).toStrictEqual({
-        success: false,
-        message: "Record not found",
       });
     });
   });

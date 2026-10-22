@@ -1,8 +1,6 @@
 import { handleAddJob } from "@/lib/mcp/tools/addJob";
 import { createJobFromNames } from "@/lib/jobs/createJobFromNames";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
-import { getDefaultResumeForUser } from "@/lib/jobs/getDefaultResumeForUser";
-import { preprocessResume } from "@/lib/ai/tools/preprocessing";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 
 vi.mock("@/lib/jobs/createJobFromNames", () => ({
@@ -13,22 +11,12 @@ vi.mock("@/lib/jobs/updateJobFromNames", () => ({
   updateJobFromNames: vi.fn(),
 }));
 
-vi.mock("@/lib/jobs/getDefaultResumeForUser", () => ({
-  getDefaultResumeForUser: vi.fn(),
-}));
-
-vi.mock("@/lib/ai/tools/preprocessing", () => ({
-  preprocessResume: vi.fn(),
-}));
-
 vi.mock("@/lib/mcp/rate-limit", () => ({
   checkMcpRateLimit: vi.fn(() => ({ allowed: true, resetIn: 0 })),
 }));
 
 const words = (n: number) => Array.from({ length: n }, () => "word").join(" ");
 const fullDescription = words(200);
-const partialDescription = words(60);
-const stubDescription = "Frontend Developer, $120k, Remote.";
 
 const baseInput = {
   company: "Acme",
@@ -46,47 +34,28 @@ function mockCreated(completeness: string) {
   });
 }
 
-function mockUsableResume() {
-  (getDefaultResumeForUser as any).mockResolvedValue({
-    id: "resume-1",
-    title: "My Resume",
-  });
-  (preprocessResume as any).mockResolvedValue({
-    success: true,
-    data: { normalizedText: "NORMALIZED RESUME TEXT", metadata: {}, isValid: true },
-  });
-}
-
-describe("handleAddJob match gating", () => {
+describe("handleAddJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (checkMcpRateLimit as any).mockReturnValue({ allowed: true, resetIn: 0 });
   });
 
-  it("issues the full directive for a full description with a usable resume", async () => {
+  it("creates the job with the token as provenance and reports it", async () => {
     mockCreated("full");
-    mockUsableResume();
 
     const result = await handleAddJob(baseInput as any, "user-1", "my-token");
-    const text = result.content[0].text;
 
-    expect(text).toContain("Job created (id: job-1)");
-    expect(text).toContain("NORMALIZED RESUME TEXT");
-    expect(text).toContain("save_match_result");
-    expect(text).toContain(
-      "SCORES: match=<0-100> recommendation=<strong|good|partial|weak>",
+    expect(createJobFromNames).toHaveBeenCalledWith(
+      expect.objectContaining({ ...baseInput, createdVia: "my-token" }),
+      "user-1",
     );
-    expect(text).toContain("## Overall Fit");
-    expect(text).toContain("## Key Strengths");
-    expect(text).toContain("## Gaps / Risks");
-    expect(text).toContain("## Recommendation");
-    expect(text).toContain('"resumeId": "resume-1"');
-    expect(text).not.toContain("PARTIAL DESCRIPTION WARNING");
+    expect(result.content[0].text).toBe(
+      "Created Acme; Created Engineer. Job created (id: job-1).",
+    );
   });
 
   it("passes dueDate to createJobFromNames unchanged, leaving an omitted one to its default", async () => {
     mockCreated("full");
-    mockUsableResume();
     const dueDate = new Date("2030-02-01T00:00:00Z");
 
     await handleAddJob({ ...baseInput, dueDate } as any, "user-1", "my-token");
@@ -97,64 +66,7 @@ describe("handleAddJob match gating", () => {
     expect(calls[1][0].dueDate).toBeUndefined();
   });
 
-  it("issues a directive WITH a provisional warning for a partial description", async () => {
-    mockCreated("partial");
-    mockUsableResume();
-
-    const result = await handleAddJob(
-      { ...baseInput, jobDescription: partialDescription } as any,
-      "user-1",
-      "my-token",
-    );
-    const text = result.content[0].text;
-
-    expect(text).toContain("save_match_result");
-    expect(text).toContain("PARTIAL DESCRIPTION WARNING");
-    expect(text).toContain("update_job");
-  });
-
-  it("refuses to offer a match for a title-only description", async () => {
-    mockCreated("title-only");
-
-    const result = await handleAddJob(
-      { ...baseInput, jobDescription: stubDescription } as any,
-      "user-1",
-      "my-token",
-    );
-    const text = result.content[0].text;
-
-    expect(text).toContain("Job created (id: job-1)");
-    expect(text).toContain("too thin to score");
-    expect(text).toContain("update_job");
-    expect(text).not.toContain("save_match_result");
-    expect(getDefaultResumeForUser).not.toHaveBeenCalled();
-  });
-
-  it("notes a missing default resume and still reports the job as created", async () => {
-    mockCreated("full");
-    (getDefaultResumeForUser as any).mockResolvedValue(null);
-
-    const result = await handleAddJob(baseInput as any, "user-1", "my-token");
-    const text = result.content[0].text;
-
-    expect(text).toContain("Job created (id: job-1)");
-    expect(text).toContain("No default resume set");
-    expect(text).not.toContain("save_match_result");
-  });
-
-  it("notes an unusable default resume", async () => {
-    mockCreated("full");
-    (getDefaultResumeForUser as any).mockResolvedValue({ id: "resume-1" });
-    (preprocessResume as any).mockResolvedValue({ success: false });
-
-    const result = await handleAddJob(baseInput as any, "user-1", "my-token");
-    const text = result.content[0].text;
-
-    expect(text).toContain("couldn't be used for matching");
-    expect(text).not.toContain("save_match_result");
-  });
-
-  it("returns the duplicate message with no match offer", async () => {
+  it("returns the duplicate message and points at upsert", async () => {
     (createJobFromNames as any).mockResolvedValue({
       created: false,
       duplicateOf: { id: "job-9", title: "Engineer", company: "Acme" },
@@ -166,8 +78,7 @@ describe("handleAddJob match gating", () => {
     const text = result.content[0].text;
 
     expect(text).toContain("Duplicate detected");
-    expect(text).not.toContain("save_match_result");
-    expect(getDefaultResumeForUser).not.toHaveBeenCalled();
+    expect(text).toContain("upsert: true");
   });
 
   it("short-circuits when rate limited", async () => {
@@ -203,7 +114,6 @@ describe("handleAddJob upsert routing", () => {
       resolutions: [],
       message: "Job job-9 updated. Fields changed: description.",
     });
-    mockUsableResume();
 
     const result = await handleAddJob(
       { ...baseInput, upsert: true } as any,
@@ -217,7 +127,6 @@ describe("handleAddJob upsert routing", () => {
       "user-1",
     );
     expect(text).toContain("Job job-9 updated");
-    expect(text).toContain("save_match_result");
     expect(text).not.toContain("Duplicate detected");
   });
 

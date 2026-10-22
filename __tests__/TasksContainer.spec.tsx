@@ -6,12 +6,10 @@ import {
   getTaskById,
   deleteTaskById,
   updateTaskStatus,
-  startActivityFromTask,
   createTask,
 } from "@/actions/task.actions";
 import { Task } from "@/models/task.model";
 import { useRouter } from "next/navigation";
-import { useActivity } from "@/context/ActivityContext";
 
 vi.mock("next-auth", () => {
   const mockAuth = vi.fn();
@@ -48,7 +46,6 @@ vi.mock("@/actions/task.actions", () => ({
   getTaskById: vi.fn(),
   deleteTaskById: vi.fn(),
   updateTaskStatus: vi.fn(),
-  startActivityFromTask: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
 }));
@@ -56,12 +53,6 @@ vi.mock("@/actions/task.actions", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
   useSearchParams: vi.fn(() => new URLSearchParams()),
-}));
-
-vi.mock("@/context/ActivityContext", () => ({
-  useActivity: vi.fn(() => ({
-    refreshCurrentActivity: vi.fn(),
-  })),
 }));
 
 global.ResizeObserver = class ResizeObserver {
@@ -113,25 +104,6 @@ describe("TasksContainer Component", () => {
     prefetch: vi.fn(),
   };
 
-  const mockRefreshCurrentActivity = vi.fn();
-
-  const mockActivityTypes = [
-    {
-      id: "type-1",
-      label: "Development",
-      value: "development",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "type-2",
-      label: "Testing",
-      value: "testing",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
-
   const mockTasks: Task[] = [
     {
       id: "task-1",
@@ -142,15 +114,6 @@ describe("TasksContainer Component", () => {
       priority: 5,
       percentComplete: 50,
       dueDate: new Date("2026-12-31"),
-      activityTypeId: "type-1",
-      activityType: {
-        id: "type-1",
-        label: "Development",
-        value: "development",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      activities: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -163,15 +126,6 @@ describe("TasksContainer Component", () => {
       priority: 8,
       percentComplete: 25,
       dueDate: new Date("2026-11-30"),
-      activityTypeId: "type-2",
-      activityType: {
-        id: "type-2",
-        label: "Testing",
-        value: "testing",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      activities: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -184,9 +138,6 @@ describe("TasksContainer Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as any).mockReturnValue(mockRouter);
-    (useActivity as any).mockReturnValue({
-      refreshCurrentActivity: mockRefreshCurrentActivity,
-    });
   });
 
   describe("Initial Load", () => {
@@ -197,10 +148,10 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(1, 25, undefined, [
+        expect(getTasksList).toHaveBeenCalledWith(1, 25, [
           "in-progress",
           "needs-attention",
         ], undefined, "none");
@@ -217,7 +168,7 @@ describe("TasksContainer Component", () => {
         () => new Promise(() => {}) // Never resolves to keep loading state
       );
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       expect(screen.getByTestId("loader")).toBeInTheDocument();
     });
@@ -229,7 +180,7 @@ describe("TasksContainer Component", () => {
         total: 0,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText(/No tasks found/i)).toBeInTheDocument();
@@ -245,7 +196,7 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.queryByTestId("loader")).not.toBeInTheDocument();
@@ -451,240 +402,6 @@ describe("TasksContainer Component", () => {
       });
     });
 
-    it("should start activity from task successfully", async () => {
-      (startActivityFromTask as any).mockResolvedValue({
-        success: true,
-      });
-
-      const startActivityButtons = screen.getAllByTestId(/start-activity-/);
-      await user.click(startActivityButtons[0]);
-
-      await waitFor(() => {
-        expect(startActivityFromTask).toHaveBeenCalledWith("task-1");
-        expect(mockRefreshCurrentActivity).toHaveBeenCalled();
-      });
-    });
-
-    it("should handle start activity failure", async () => {
-      (startActivityFromTask as any).mockResolvedValue({
-        success: false,
-        message: "Failed to start activity",
-      });
-
-      const startActivityButtons = screen.getAllByTestId(/start-activity-/);
-      await user.click(startActivityButtons[0]);
-
-      // A rejected start resyncs the per-user running activity, but with
-      // nothing running it must not offer to switch.
-      await waitFor(() => {
-        expect(startActivityFromTask).toHaveBeenCalledWith("task-1");
-        expect(mockRefreshCurrentActivity).toHaveBeenCalledTimes(1);
-      });
-      expect(
-        screen.queryByText(/Stop current activity and start a new one/i),
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Start Activity Confirmation", () => {
-    const mockStopActivity = vi.fn();
-
-    beforeEach(() => {
-      (getTasksList as any).mockResolvedValue({
-        success: true,
-        data: mockTasks,
-        total: 2,
-      });
-    });
-
-    it("starts the activity directly when nothing is currently in progress", async () => {
-      (startActivityFromTask as any).mockResolvedValue({ success: true });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      const startActivityButtons = screen.getAllByTestId(/start-activity-/);
-      await user.click(startActivityButtons[0]);
-
-      await waitFor(() => {
-        expect(startActivityFromTask).toHaveBeenCalledWith("task-1");
-      });
-      expect(mockStopActivity).not.toHaveBeenCalled();
-    });
-
-    it("shows a confirm dialog naming the running activity instead of starting immediately", async () => {
-      (useActivity as any).mockReturnValue({
-        refreshCurrentActivity: mockRefreshCurrentActivity,
-        currentActivity: { id: "current-1", activityName: "Ongoing Task" },
-        stopActivity: mockStopActivity,
-      });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      const startActivityButtons = screen.getAllByTestId(/start-activity-/);
-      await user.click(startActivityButtons[0]);
-
-      expect(startActivityFromTask).not.toHaveBeenCalled();
-      expect(
-        await screen.findByText(/"Ongoing Task" is currently in progress/i)
-      ).toBeInTheDocument();
-    });
-
-    it("stops the running activity then starts the task activity on confirm", async () => {
-      (useActivity as any).mockReturnValue({
-        refreshCurrentActivity: mockRefreshCurrentActivity,
-        currentActivity: { id: "current-1", activityName: "Ongoing Task" },
-        stopActivity: mockStopActivity,
-      });
-      (startActivityFromTask as any).mockResolvedValue({ success: true });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      const startActivityButtons = screen.getAllByTestId(/start-activity-/);
-      await user.click(startActivityButtons[0]);
-
-      const confirmButton = await screen.findByRole("button", {
-        name: "Stop & Start",
-      });
-      await user.click(confirmButton);
-
-      await waitFor(() => {
-        expect(mockStopActivity).toHaveBeenCalledTimes(1);
-        expect(startActivityFromTask).toHaveBeenCalledWith("task-1");
-      });
-    });
-  });
-
-  describe("Save & Start from the Add Task dialog", () => {
-    beforeEach(() => {
-      (getTasksList as any).mockResolvedValue({
-        success: true,
-        data: mockTasks,
-        total: 2,
-      });
-    });
-
-    const openAddTaskDialogAndFillForm = async () => {
-      const addButton = screen.getByTestId("add-task-btn");
-      await user.click(addButton);
-
-      await screen.findByTestId("task-form-dialog-title");
-
-      const titleInput = screen.getByLabelText(/Title/i);
-      await user.type(titleInput, "Brand New Task");
-
-      const activityTypeCombobox = screen.getByLabelText(/Activity Type/i);
-      await user.click(activityTypeCombobox);
-      const developmentOption = screen.getByRole("option", {
-        name: "Development",
-      });
-      await user.click(developmentOption);
-    };
-
-    it("creates the task and starts its activity when nothing is in progress", async () => {
-      (createTask as any).mockResolvedValue({
-        success: true,
-        data: { id: "new-task-id" },
-      });
-      (startActivityFromTask as any).mockResolvedValue({ success: true });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      await openAddTaskDialogAndFillForm();
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-        expect(startActivityFromTask).toHaveBeenCalledWith("new-task-id");
-        expect(mockRefreshCurrentActivity).toHaveBeenCalled();
-      });
-      expect(
-        screen.queryByTestId("task-form-dialog-title")
-      ).not.toBeInTheDocument();
-    });
-
-    it("shows the confirm dialog instead of starting immediately when an activity is already running", async () => {
-      const mockStopActivity = vi.fn();
-      (useActivity as any).mockReturnValue({
-        refreshCurrentActivity: mockRefreshCurrentActivity,
-        currentActivity: { id: "current-1", activityName: "Ongoing Task" },
-        stopActivity: mockStopActivity,
-      });
-      (createTask as any).mockResolvedValue({
-        success: true,
-        data: { id: "new-task-id" },
-      });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      await openAddTaskDialogAndFillForm();
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-      });
-      expect(startActivityFromTask).not.toHaveBeenCalled();
-      expect(
-        await screen.findByText(/"Ongoing Task" is currently in progress/i)
-      ).toBeInTheDocument();
-
-      (startActivityFromTask as any).mockResolvedValue({ success: true });
-      const confirmButton = screen.getByRole("button", {
-        name: "Stop & Start",
-      });
-      await user.click(confirmButton);
-
-      await waitFor(() => {
-        expect(mockStopActivity).toHaveBeenCalledTimes(1);
-        expect(startActivityFromTask).toHaveBeenCalledWith("new-task-id");
-      });
-    });
-
-    it("does not start an activity when task creation fails", async () => {
-      (createTask as any).mockResolvedValue({
-        success: false,
-        message: "Failed to create task",
-      });
-
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      await openAddTaskDialogAndFillForm();
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-      });
-      expect(startActivityFromTask).not.toHaveBeenCalled();
-    });
   });
 
   describe("Filtering and Grouping", () => {
@@ -696,20 +413,11 @@ describe("TasksContainer Component", () => {
       });
 
       render(
-        <TasksContainer activityTypes={mockActivityTypes} filterKey="type-1" />
+        <TasksContainer />
       );
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-    });
-
-    it("should apply activity type filter", async () => {
-      await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(1, 25, "type-1", [
-          "in-progress",
-          "needs-attention",
-        ], undefined, "none");
       });
     });
 
@@ -725,7 +433,7 @@ describe("TasksContainer Component", () => {
       await user.click(inProgressCheckbox);
 
       await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(1, 25, "type-1", [
+        expect(getTasksList).toHaveBeenCalledWith(1, 25, [
           "needs-attention",
         ], undefined, "none");
       });
@@ -743,7 +451,7 @@ describe("TasksContainer Component", () => {
       });
 
       await waitFor(() => {
-        expect(getTasksList).toHaveBeenLastCalledWith(1, 25, "type-1", [
+        expect(getTasksList).toHaveBeenLastCalledWith(1, 25, [
           "in-progress",
           "needs-attention",
         ], undefined, "dueDate");
@@ -759,7 +467,7 @@ describe("TasksContainer Component", () => {
         total: 20,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -786,7 +494,7 @@ describe("TasksContainer Component", () => {
           total: 20,
         });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -801,7 +509,7 @@ describe("TasksContainer Component", () => {
       });
 
       await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(2, 25, undefined, [
+        expect(getTasksList).toHaveBeenCalledWith(2, 25, [
           "in-progress",
           "needs-attention",
         ], undefined, "none");
@@ -815,7 +523,7 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.queryByText("Load More")).not.toBeInTheDocument();
@@ -829,7 +537,7 @@ describe("TasksContainer Component", () => {
         total: 10,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText(/Showing/i)).toBeInTheDocument();
@@ -848,7 +556,7 @@ describe("TasksContainer Component", () => {
         message: "Failed to fetch tasks",
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(getTasksList).toHaveBeenCalled();
@@ -872,7 +580,7 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       const searchInput = screen.getByPlaceholderText("Search tasks...");
       expect(searchInput).toBeInTheDocument();
@@ -885,13 +593,12 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           undefined,
           "none"
@@ -918,7 +625,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "Task 1",
           "none"
@@ -941,7 +647,7 @@ describe("TasksContainer Component", () => {
           total: 1,
         });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -977,7 +683,7 @@ describe("TasksContainer Component", () => {
           total: 0,
         });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -1005,7 +711,7 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -1028,7 +734,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["needs-attention"],
           undefined,
           "none"
@@ -1052,55 +757,8 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["needs-attention"],
           "Task",
-          "none"
-        );
-      });
-    });
-
-    it("should combine search with activity type filter", async () => {
-      (getTasksList as any).mockResolvedValue({
-        success: true,
-        data: mockTasks,
-        total: 2,
-      });
-
-      render(
-        <TasksContainer activityTypes={mockActivityTypes} filterKey="type-1" />
-      );
-
-      await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(
-          1,
-          25,
-          "type-1",
-          ["in-progress", "needs-attention"],
-          undefined,
-          "none"
-        );
-      });
-
-      vi.clearAllMocks();
-
-      const searchInput = screen.getByPlaceholderText("Search tasks...");
-      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).type(
-        searchInput,
-        "Development"
-      );
-
-      await act(async () => {
-        vi.advanceTimersByTime(300);
-      });
-
-      await waitFor(() => {
-        expect(getTasksList).toHaveBeenCalledWith(
-          1,
-          25,
-          "type-1",
-          ["in-progress", "needs-attention"],
-          "Development",
           "none"
         );
       });
@@ -1124,7 +782,7 @@ describe("TasksContainer Component", () => {
           total: 20,
         });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -1145,7 +803,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "Task",
           "none"
@@ -1166,7 +823,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           2,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "Task",
           "none"
@@ -1181,7 +837,7 @@ describe("TasksContainer Component", () => {
         total: 2,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -1203,7 +859,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "first search",
           "none"
@@ -1229,7 +884,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "second search",
           "none"
@@ -1248,7 +902,7 @@ describe("TasksContainer Component", () => {
         advanceTimers: vi.advanceTimersByTime,
       });
 
-      render(<TasksContainer activityTypes={mockActivityTypes} />);
+      render(<TasksContainer />);
 
       await waitFor(() => {
         expect(screen.getByText("Task 1")).toBeInTheDocument();
@@ -1270,7 +924,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenLastCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "Task",
           "none"
@@ -1289,7 +942,6 @@ describe("TasksContainer Component", () => {
 
       render(
         <TasksContainer
-          activityTypes={mockActivityTypes}
           onTasksChanged={mockOnTasksChanged}
         />
       );
@@ -1313,7 +965,6 @@ describe("TasksContainer Component", () => {
         expect(getTasksList).toHaveBeenCalledWith(
           1,
           25,
-          undefined,
           ["in-progress", "needs-attention"],
           "Task",
           "none"

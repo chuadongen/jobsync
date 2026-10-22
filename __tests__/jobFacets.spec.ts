@@ -15,20 +15,18 @@ describe("jobFacets", () => {
 
     it("reads every facet param", () => {
       const params = new URLSearchParams(
-        "status=applied,interview&accepted=1&type=FT,C&workplace=REMOTE&dismissed=1",
+        "status=applied,interview&type=IN,C&workplace=REMOTE",
       );
       expect(parseJobFacets(params)).toEqual({
         statuses: ["applied", "interview"],
-        acceptedDiscovered: true,
-        jobTypes: ["FT", "C"],
+        jobTypes: ["IN", "C"],
         workplaces: ["REMOTE"],
-        includeDismissed: true,
       });
     });
 
     it("drops unknown and duplicate values", () => {
       const params = new URLSearchParams(
-        "status=bogus,applied,applied&type=fulltime&workplace=REMOTE,REMOTE&accepted=yes",
+        "status=bogus,applied,applied&type=fulltime&workplace=REMOTE,REMOTE",
       );
       expect(parseJobFacets(params)).toEqual({
         ...EMPTY_JOB_FACETS,
@@ -58,7 +56,7 @@ describe("jobFacets", () => {
   describe("writeJobFacets", () => {
     it("keeps unrelated params and removes cleared facets", () => {
       const before = new URLSearchParams(
-        "company=google&applied=true&status=draft&dismissed=1",
+        "company=google&applied=true&status=draft",
       );
       const after = writeJobFacets(before, {
         ...EMPTY_JOB_FACETS,
@@ -68,17 +66,14 @@ describe("jobFacets", () => {
       expect(after.get("applied")).toBe("true");
       expect(after.get("workplace")).toBe("HYBRID");
       expect(after.has("status")).toBe(false);
-      expect(after.has("dismissed")).toBe(false);
       expect(before.get("status")).toBe("draft");
     });
 
     it("round-trips through parseJobFacets", () => {
       const facets = {
         statuses: ["applied", "offer"],
-        acceptedDiscovered: true,
         jobTypes: ["PT"],
         workplaces: ["REMOTE", "ONSITE"],
-        includeDismissed: false,
       };
       const params = writeJobFacets(new URLSearchParams(), facets);
       expect(parseJobFacets(params)).toEqual(facets);
@@ -86,16 +81,14 @@ describe("jobFacets", () => {
   });
 
   describe("countJobFacets", () => {
-    it("counts values, with one each for the two flags", () => {
+    it("counts every picked value", () => {
       expect(
         countJobFacets({
           statuses: ["applied", "interview"],
-          acceptedDiscovered: true,
           jobTypes: ["FT"],
           workplaces: ["REMOTE"],
-          includeDismissed: true,
         }),
-      ).toBe(6);
+      ).toBe(4);
       expect(hasJobFacets(EMPTY_JOB_FACETS)).toBe(false);
     });
   });

@@ -7,14 +7,10 @@ export {
   deleteJobStage,
   setCurrentJobStage,
   setStageNotes,
+  setStagePrep,
   setStageOutcome,
 } from "./jobStage/mutations";
 export {
   linkStageInterviewer,
   unlinkStageInterviewer,
 } from "./jobStage/interviewers";
-export {
-  addStagePrepQuestions,
-  removeStagePrepQuestion,
-  setPrepQuestionAsked,
-} from "./jobStage/prep";

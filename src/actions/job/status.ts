@@ -48,23 +48,3 @@ export const updateJobStatus = async (
     return handleError(error, msg);
   }
 };
-
-export const saveJobMatchResult = async (
-  jobId: string,
-  matchScore: number,
-  matchData: string,
-): Promise<any | undefined> => {
-  try {
-    const user = await requireUser();
-
-    await prisma.job.update({
-      where: { id: jobId, userId: user.id },
-      data: { matchScore, matchData },
-    });
-
-    return { success: true };
-  } catch (error) {
-    const msg = "Failed to save match result.";
-    return handleError(error, msg);
-  }
-};

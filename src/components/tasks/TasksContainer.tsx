@@ -2,36 +2,21 @@
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "../ui/card";
 import { Loader } from "lucide-react";
-import {
-  deleteTaskById,
-  getTaskById,
-  startActivityFromTask,
-} from "@/actions/task.actions";
+import { deleteTaskById, getTaskById } from "@/actions/task.actions";
 import { toastActionResult, toastError } from "@/lib/toast";
 import { Task } from "@/models/task.model";
 import Loading from "../Loading";
 import TasksTable from "./TasksTable";
 import { TaskForm } from "./TaskForm";
-import { ActivityType } from "@/models/activity.model";
-import { useActivity } from "@/context/ActivityContext";
-import { useActivitySwitchConfirm } from "@/hooks/useActivitySwitchConfirm";
 import { useTasksList } from "./tasks-container/useTasksList";
 import { useAutoOpenAddTaskDialog } from "./tasks-container/useAutoOpenAddTaskDialog";
 import { TasksToolbar } from "./tasks-container/TasksToolbar";
 
 type TasksContainerProps = {
-  activityTypes: ActivityType[];
-  filterKey?: string;
   onTasksChanged?: () => void;
 };
 
-function TasksContainer({
-  activityTypes,
-  filterKey,
-  onTasksChanged,
-}: TasksContainerProps) {
-  const { refreshCurrentActivity } = useActivity();
-  const { requestStart, confirmDialog } = useActivitySwitchConfirm();
+function TasksContainer({ onTasksChanged }: TasksContainerProps) {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -49,7 +34,7 @@ function TasksContainer({
     sentinelRef,
     reloadTasks,
     onChangeTaskStatus,
-  } = useTasksList({ filterKey, onTasksChanged });
+  } = useTasksList({ onTasksChanged });
 
   useAutoOpenAddTaskDialog(setDialogOpen);
 
@@ -74,17 +59,6 @@ function TasksContainer({
   const addTaskForm = () => {
     resetEditTask();
     setDialogOpen(true);
-  };
-
-  const onStartActivity = (taskId: string) => {
-    requestStart(async () => {
-      const result = await startActivityFromTask(taskId);
-      toastActionResult(result, {
-        success: "Activity started from task",
-        onSuccess: () => refreshCurrentActivity(),
-      });
-      return result.success;
-    });
   };
 
   const resetEditTask = () => {
@@ -115,7 +89,6 @@ function TasksContainer({
                 deleteTask={onDeleteTask}
                 editTask={onEditTask}
                 onChangeTaskStatus={onChangeTaskStatus}
-                onStartActivity={onStartActivity}
                 groupBy={groupBy}
               />
             </>
@@ -136,15 +109,12 @@ function TasksContainer({
         <CardFooter></CardFooter>
       </Card>
       <TaskForm
-        activityTypes={activityTypes}
         editTask={editTask}
         resetEditTask={resetEditTask}
         onTaskSaved={reloadTasks}
         dialogOpen={dialogOpen}
         setDialogOpen={setDialogOpen}
-        onSaveAndStart={onStartActivity}
       />
-      {confirmDialog}
     </>
   );
 }

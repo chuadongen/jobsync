@@ -10,10 +10,8 @@ const DEFAULT_STATUS_FILTER: TaskStatus[] = ["in-progress", "needs-attention"];
 // Owns the task list itself: pagination, search, status/group filters,
 // infinite scroll, and the optimistic status-change update.
 export function useTasksList({
-  filterKey,
   onTasksChanged,
 }: {
-  filterKey?: string;
   onTasksChanged?: () => void;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -34,7 +32,6 @@ export function useTasksList({
   const loadTasks = useCallback(
     async (
       pageNum: number,
-      filter?: string,
       statuses?: TaskStatus[],
       search?: string,
       group?: TaskGroupBy,
@@ -44,7 +41,6 @@ export function useTasksList({
       const { success, data, total, message } = await getTasksList(
         pageNum,
         tasksPerPage,
-        filter,
         statuses,
         search,
         group,
@@ -65,13 +61,12 @@ export function useTasksList({
   const reloadTasks = useCallback(async () => {
     await loadTasks(
       1,
-      filterKey,
       statusFilter,
       searchTerm || undefined,
       groupBy,
     );
     onTasksChanged?.();
-  }, [loadTasks, filterKey, statusFilter, searchTerm, groupBy, onTasksChanged]);
+  }, [loadTasks, statusFilter, searchTerm, groupBy, onTasksChanged]);
 
   const onChangeTaskStatus = async (taskId: string, status: TaskStatus) => {
     const originalTasks = [...tasks];
@@ -92,13 +87,12 @@ export function useTasksList({
     (async () =>
       await loadTasks(
         1,
-        filterKey,
         statusFilter,
         searchTerm || undefined,
         groupBy,
       ))();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadTasks, filterKey, statusFilter, groupBy]);
+  }, [loadTasks, statusFilter, groupBy]);
 
   // Debounced search effect
   useEffect(() => {
@@ -108,7 +102,7 @@ export function useTasksList({
     if (searchTerm === "" && !hasSearched.current) return;
 
     const timer = setTimeout(() => {
-      loadTasks(1, filterKey, statusFilter, searchTerm || undefined, groupBy);
+      loadTasks(1, statusFilter, searchTerm || undefined, groupBy);
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,7 +123,6 @@ export function useTasksList({
         ) {
           loadTasks(
             page + 1,
-            filterKey,
             statusFilter,
             searchTerm || undefined,
             groupBy,
@@ -145,7 +138,6 @@ export function useTasksList({
     tasks.length,
     totalTasks,
     page,
-    filterKey,
     statusFilter,
     searchTerm,
     groupBy,

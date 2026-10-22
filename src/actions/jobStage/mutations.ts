@@ -106,26 +106,18 @@ export const updateJobStage = async (
     const existing = await assertStageOwned(values.id, user.id);
     const stageType = await resolveStageType(parsed, user.id);
 
-    // Interviewers and prep questions only have a UI on an interview stage, so
-    // retyping away from one would strand them: invisible, unremovable, and
-    // still enough to block deleting the question.
+    // Interviewers only have a UI on an interview stage, so retyping away
+    // from one would strand them: invisible and unremovable.
     if (
       existing.StageType.Status.value === "interview" &&
       !stageType.isInterview
     ) {
-      const [interviewers, prepQuestions] = await Promise.all([
-        prisma.jobStageInterviewer.count({ where: { stageId: values.id } }),
-        prisma.jobStagePrepQuestion.count({ where: { stageId: values.id } }),
-      ]);
-      if (interviewers + prepQuestions > 0) {
-        const parts = [
-          interviewers > 0 &&
-            `${interviewers} interviewer${interviewers === 1 ? "" : "s"}`,
-          prepQuestions > 0 &&
-            `${prepQuestions} prep question${prepQuestions === 1 ? "" : "s"}`,
-        ].filter(Boolean);
+      const interviewers = await prisma.jobStageInterviewer.count({
+        where: { stageId: values.id },
+      });
+      if (interviewers > 0) {
         throw new Error(
-          `"${existing.StageType.label}" still has ${parts.join(" and ")}. Remove them before changing it to a non-interview stage.`,
+          `"${existing.StageType.label}" still has ${interviewers} interviewer${interviewers === 1 ? "" : "s"}. Remove them before changing it to a non-interview stage.`,
         );
       }
     }
@@ -244,6 +236,28 @@ export const setStageNotes = async (
     return { success: true };
   } catch (error) {
     return handleError(error, "Failed to save the note.");
+  }
+};
+
+// Prep notes and debriefs are usually written by Claude, but the user can
+// correct them in place, the same way as their own notes.
+export const setStagePrep = async (
+  stageId: string,
+  field: "prepNotes" | "debrief",
+  value: string,
+): Promise<any | undefined> => {
+  try {
+    const user = await requireUser();
+    if (field !== "prepNotes" && field !== "debrief") throw new Error("Unknown field");
+    await assertStageOwned(stageId, user.id);
+    const res = await prisma.jobStage.updateMany({
+      where: { id: stageId, Job: { userId: user.id } },
+      data: { [field]: value.trim() || null },
+    });
+    if (res.count === 0) throw new Error("Stage not found");
+    return { success: true };
+  } catch (error) {
+    return handleError(error, "Failed to save.");
   }
 };
 

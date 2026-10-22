@@ -6,6 +6,7 @@ import { STAGE_OUTCOMES } from "@/lib/constants";
 import type { JobStage } from "@/models/jobStage.model";
 import { isInterviewStage } from "./stageDisplay";
 import { StageNotes } from "./StageNotes";
+import { StagePrep, stageHasPrep } from "./StagePrep";
 
 type StageOverviewTabProps = {
   stage: JobStage;
@@ -67,6 +68,8 @@ export function StageOverviewTab({ stage, onChanged }: StageOverviewTabProps) {
       )}
 
       <StageNotes stage={stage} onChanged={onChanged} />
+
+      {stageHasPrep(stage) && <StagePrep stage={stage} onChanged={onChanged} />}
     </div>
   );
 }

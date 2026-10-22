@@ -12,13 +12,7 @@ import { addJob, updateJob } from "@/actions/job.actions";
 import { Loader, PlusCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { useForm } from "react-hook-form";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { AddJobFormSchema } from "@/models/addJobForm.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -34,7 +28,7 @@ import {
 } from "@/models/job.model";
 import { addDays } from "date-fns";
 import { z } from "zod";
-import { toastActionResult, toastError } from "@/lib/toast";
+import { toastActionResult } from "@/lib/toast";
 import {
   Form,
   FormControl,
@@ -52,16 +46,7 @@ import { Input } from "../ui/input";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Combobox } from "../ComboBox";
 import { NotesCollapsibleSection } from "./NotesCollapsibleSection";
-import { CoverLetter, Resume } from "@/models/profile.model";
-import CreateResume from "../profile/CreateResume";
-import { getResumeList } from "@/actions/profile.actions";
-import { getCoverLetterList } from "@/actions/coverLetter.actions";
 import { TagInput } from "./TagInput";
-import { IncompleteResumeHint } from "../IncompleteResumeHint";
-import {
-  buildIncompleteResumeHint,
-  hasMinResumeSections,
-} from "@/lib/resumeSections";
 import { APP_CONSTANTS, APPLIED_STATUS_VALUES } from "@/lib/constants";
 import {
   getFromLocalStorage,
@@ -98,9 +83,6 @@ export function AddJob({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(initialOpen ?? false);
-  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
-  const [resumes, setResumes] = useState<Resume[]>([]);
-  const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>(tags);
   const [isPending, startTransition] = useTransition();
 
@@ -151,24 +133,6 @@ export function AddJob({
   // The date the form filled in itself, so it can take it back again.
   const autoFilledDate = useRef<Date | null>(null);
 
-  const loadResumes = useCallback(async () => {
-    try {
-      const resumes = await getResumeList(1, APP_CONSTANTS.RESUME_PICKER_LIMIT);
-      setResumes(resumes.data ?? []);
-    } catch (error) {
-      console.error("Failed to load resumes:", error);
-    }
-  }, [setResumes]);
-
-  const loadCoverLetters = useCallback(async () => {
-    try {
-      const result = await getCoverLetterList(1, 100);
-      setCoverLetters(result.data);
-    } catch (error) {
-      console.error("Failed to load cover letters:", error);
-    }
-  }, [setCoverLetters]);
-
   useEffect(() => {
     if (editJob) {
       reset({
@@ -186,8 +150,8 @@ export function AddJob({
         jobDescription: editJob.description,
         jobUrl: editJob.jobUrl ?? "",
         dateApplied: editJob.appliedDate ?? undefined,
-        resume: editJob.Resume?.id ?? undefined,
-        coverLetter: editJob.CoverLetter?.id ?? undefined,
+        startDate: editJob.startDate ?? undefined,
+        endDate: editJob.endDate ?? undefined,
         tags: editJob.tags?.map((t) => t.id) ?? [],
       });
       // Merge any tags from editJob into the local pool so they're selectable
@@ -203,24 +167,7 @@ export function AddJob({
     }
   }, [editJob, reset]);
 
-  useEffect(() => {
-    if (!dialogOpen) return;
-    loadResumes();
-    loadCoverLetters();
-  }, [dialogOpen, loadResumes, loadCoverLetters]);
-
-  const setNewResumeId = (id: string) => {
-    setTimeout(() => {
-      setValue("resume", id);
-    }, 500);
-  };
-
   function onSubmit(data: z.infer<typeof AddJobFormSchema>) {
-    const selected = resumes.find((r) => r.id === data.resume);
-    if (selected && !hasMinResumeSections(selected._count?.ResumeSections)) {
-      toastError(buildIncompleteResumeHint());
-      return;
-    }
     startTransition(async () => {
       const result = editJob ? await updateJob(data) : await addJob(data);
       toastActionResult(result, {
@@ -286,10 +233,6 @@ export function AddJob({
   };
 
   const closeDialog = () => setDialogOpen(false);
-
-  const createResume = () => {
-    setResumeDialogOpen(true);
-  };
 
   return (
     <>
@@ -578,54 +521,35 @@ export function AddJob({
                   />
                 </div>
 
-                {/* Resume */}
-                <div className="flex items-end">
+                {/* Role period, checked against availability blocks */}
+                <div>
                   <FormField
                     control={form.control}
-                    name="resume"
+                    name="startDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Resume</FormLabel>
-                        <SelectFormCtrl
-                          label="Resume"
-                          options={resumes?.map((r) =>
-                            hasMinResumeSections(r._count?.ResumeSections)
-                              ? r
-                              : {
-                                  ...r,
-                                  disabled: true,
-                                  suffix: <IncompleteResumeHint />,
-                                },
-                          )}
+                        <FormLabel>Role Start</FormLabel>
+                        <DatePicker
                           field={field}
+                          presets={false}
+                          isEnabled={true}
                         />
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button variant="link" type="button" onClick={createResume}>
-                    Add New
-                  </Button>
-                  <CreateResume
-                    resumeDialogOpen={resumeDialogOpen}
-                    setResumeDialogOpen={setResumeDialogOpen}
-                    reloadResumes={loadResumes}
-                    setNewResumeId={setNewResumeId}
-                  />
                 </div>
-
-                {/* Cover Letter */}
-                <div className="flex items-end self-start">
+                <div>
                   <FormField
                     control={form.control}
-                    name="coverLetter"
+                    name="endDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Cover Letter</FormLabel>
-                        <SelectFormCtrl
-                          label="Cover Letter"
-                          options={coverLetters}
+                        <FormLabel>Role End</FormLabel>
+                        <DatePicker
                           field={field}
+                          presets={false}
+                          isEnabled={true}
                         />
                         <FormMessage />
                       </FormItem>

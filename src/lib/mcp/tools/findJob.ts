@@ -32,7 +32,6 @@ export async function handleFindJob(
       select: {
         id: true,
         descriptionCompleteness: true,
-        matchScore: true,
         createdVia: true,
         Status: { select: { value: true } },
         tags: { select: { label: true } },
@@ -41,8 +40,6 @@ export async function handleFindJob(
 
     const status = detail?.Status?.value ?? "unknown";
     const completeness = detail?.descriptionCompleteness ?? "unknown";
-    const score =
-      detail?.matchScore != null ? `${detail.matchScore}%` : "not scored";
     const updatable = detail?.createdVia != null;
     // update_job replaces tags wholesale (no merge) — surface the current
     // list so an agent that wants to keep them can echo them back, instead
@@ -54,7 +51,7 @@ export async function handleFindJob(
     const text =
       `Found existing job "${existing.title}" at "${existing.company}" ` +
       `(id: ${existing.id}, status: ${status}, description: ${completeness}, ` +
-      `match: ${score}, tags: ${tagsList}). ` +
+      `tags: ${tagsList}). ` +
       (updatable
         ? `Call update_job with jobId "${existing.id}" to enrich or correct it ` +
           `instead of adding a duplicate. Tags are replaced wholesale, not ` +

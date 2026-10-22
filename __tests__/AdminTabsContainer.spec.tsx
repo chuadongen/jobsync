@@ -34,11 +34,6 @@ vi.mock("@/actions/contact.actions", () => ({
   updateContact: vi.fn(),
 }));
 
-vi.mock("@/actions/activity.actions", () => ({
-  getActivityTypeList: vi.fn().mockResolvedValue({ data: [], total: 0 }),
-  createActivityType: vi.fn(),
-}));
-
 vi.mock("@/actions/contactRole.actions", () => ({
   getContactRoleList: vi.fn().mockResolvedValue({ data: [], total: 0 }),
   getAllContactRoles: vi.fn().mockResolvedValue([]),
@@ -69,9 +64,6 @@ describe("AdminTabsContainer", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("tab", { name: "Locations" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "Activity Types" })
     ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Contacts" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Roles" })).toBeInTheDocument();
@@ -109,19 +101,6 @@ describe("AdminTabsContainer", () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       "/dashboard/admin?tab=locations"
-    );
-  });
-
-  it("should switch to activity types tab and update URL", async () => {
-    render(<AdminTabsContainer />);
-
-    const activityTypesTab = screen.getByRole("tab", {
-      name: "Activity Types",
-    });
-    await user.click(activityTypesTab);
-
-    expect(mockPush).toHaveBeenCalledWith(
-      "/dashboard/admin?tab=activity-types"
     );
   });
 

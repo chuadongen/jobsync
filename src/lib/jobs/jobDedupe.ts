@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import { jobDedupeKey, normalizeJobUrl } from "@/lib/scraper/utils";
+import { jobDedupeKey, normalizeJobUrl } from "@/lib/jobs/jobUrl";
 
 export interface ExistingJobRef {
   id: string;

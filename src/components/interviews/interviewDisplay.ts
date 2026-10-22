@@ -80,8 +80,3 @@ export function interviewerSummary(
   if (interviewers.length > 2) return `${interviewers.length} interviewers`;
   return interviewers.map((i) => abbreviate(i.Contact.name)).join(", ");
 }
-
-export function prepSummary(prep: { asked: boolean }[]): string {
-  const asked = prep.filter((p) => p.asked).length;
-  return asked > 0 ? `${asked} / ${prep.length}` : String(prep.length);
-}

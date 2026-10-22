@@ -19,7 +19,6 @@ const base = {
   onChangeStatus: () => {},
   onAddStage: () => {},
   onLinkInterviewers: () => {},
-  onAddPrepQuestions: () => {},
 };
 
 const open = async () =>
@@ -39,7 +38,7 @@ describe("UpdateStatusMenu", () => {
     ).toBeInTheDocument();
   });
 
-  it("enables all three items on an interview stage", async () => {
+  it("enables both items on an interview stage", async () => {
     render(
       <UpdateStatusMenu
         {...base}
@@ -50,7 +49,6 @@ describe("UpdateStatusMenu", () => {
 
     expect(screen.getByRole("menuitem", { name: /Add Stage/ })).not.toHaveAttribute("aria-disabled", "true");
     expect(screen.getByRole("menuitem", { name: /Add Interviewers/ })).not.toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("menuitem", { name: /Add to Prep List/ })).not.toHaveAttribute("aria-disabled", "true");
   });
 
   // Disabled with a visible reason, not hidden: a menu whose items come and
@@ -60,7 +58,6 @@ describe("UpdateStatusMenu", () => {
     await open();
 
     expect(screen.getByRole("menuitem", { name: /Add Interviewers/ })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("menuitem", { name: /Add to Prep List/ })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getAllByText(/Applied is not an interview stage/).length).toBeGreaterThan(0);
   });
 

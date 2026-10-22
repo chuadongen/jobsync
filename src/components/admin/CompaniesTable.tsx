@@ -32,7 +32,6 @@ import { deleteCompanyById, setCompanyWatched } from "@/actions/company.actions"
 import { toastSuccess, toastError } from "@/lib/toast";
 import { DeleteAlertDialog } from "../DeleteAlertDialog";
 import { AlertDialog } from "@/models/alertDialog.model";
-import { BoardCell } from "./BoardCell";
 
 type CompaniesTableProps = {
   companies: Company[];
@@ -113,7 +112,6 @@ function CompaniesTable({
             <TableHead>Company Name</TableHead>
             {scope === "watchlist" ? (
               <>
-                <TableHead>Board</TableHead>
                 <TableHead>Jobs</TableHead>
                 <TableHead>Watched</TableHead>
               </>
@@ -164,16 +162,10 @@ function CompaniesTable({
                         <Eye className="h-3.5 w-3.5" />
                       </span>
                     )}
-                    {scope !== "watchlist" && company.atsToken && (
-                      <BoardCell company={company} />
-                    )}
                   </span>
                 </TableCell>
                 {scope === "watchlist" ? (
                   <>
-                    <TableCell>
-                      <BoardCell company={company} />
-                    </TableCell>
                     <TableCell className="font-medium">
                       {company._count?.jobsTotal ?? 0}
                     </TableCell>

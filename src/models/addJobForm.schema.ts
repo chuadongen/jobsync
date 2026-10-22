@@ -58,8 +58,9 @@ export const AddJobFormSchema = z.object({
       message: "Job description must be at least 10 characters.",
     }),
   jobUrl: z.string().optional(),
-  resume: z.string().optional(),
-  coverLetter: z.string().optional(),
+  // Role period, checked against availability blocks
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
   tags: z
     .array(z.string())
     .max(APP_CONSTANTS.MAX_JOB_TAGS)

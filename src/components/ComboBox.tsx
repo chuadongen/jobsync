@@ -26,7 +26,6 @@ import { JobForm } from "@/models/job.model";
 import { addCompany } from "@/actions/company.actions";
 import { createJobTitle } from "@/actions/jobtitle.actions";
 import { toastError } from "@/lib/toast";
-import { createActivityType } from "@/actions/activity.actions";
 import { createJobSource } from "@/actions/job.actions";
 import { createContactRole } from "@/actions/contactRole.actions";
 
@@ -121,9 +120,6 @@ export function Combobox({
             return;
           }
           response = roleRes.data;
-          break;
-        case "activityType":
-          response = await createActivityType(label);
           break;
         default:
           break;

@@ -13,6 +13,8 @@ vi.mock("@/lib/db", () => {
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      // No account yet, so sign-up is open unless a test says otherwise.
+      count: vi.fn().mockResolvedValue(0),
     },
     jobSource: {
       createMany: vi.fn(),
@@ -113,6 +115,21 @@ describe("Auth Actions", () => {
           createdBy: mockNewUser.id,
         })),
       });
+    });
+
+    it("refuses a second account once one exists", async () => {
+      (prisma.user.count as any).mockResolvedValueOnce(1);
+
+      const result = await signup({
+        name: "Second",
+        email: "second@example.com",
+        password: "Password1!",
+      });
+
+      expect(result).toEqual({
+        error: "Sign-up is closed. This JobSync already has its account.",
+      });
+      expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
     it("should return error if user already exists", async () => {
@@ -225,7 +242,7 @@ describe("Auth Actions", () => {
       });
     });
 
-    it("seeds the fourteen stage types after the statuses exist", async () => {
+    it("seeds the seventeen stage types after the statuses exist", async () => {
       (prisma.user.findUnique as any).mockResolvedValue(null);
       (bcrypt.hash as any).mockResolvedValue("hashed");
       (prisma.user.create as any).mockResolvedValue({ id: "new-user-id" });
@@ -237,7 +254,7 @@ describe("Auth Actions", () => {
       });
 
       const rows = (prisma.jobStageType.createMany as any).mock.calls[0][0].data;
-      expect(rows).toHaveLength(14);
+      expect(rows).toHaveLength(17);
       expect(rows.every((r: any) => r.createdBy === "new-user-id")).toBe(true);
       expect(rows.every((r: any) => typeof r.statusId === "string")).toBe(true);
       expect(rows.find((r: any) => r.value === "offer accepted")).toBeTruthy();

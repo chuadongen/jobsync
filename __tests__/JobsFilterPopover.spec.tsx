@@ -19,7 +19,6 @@ const counts = (total: number) => ({
   data: {
     total,
     statusCounts: { "s-applied": 11, "s-interview": 4, "s-rejected": 21 },
-    acceptedDiscovered: 7,
   },
 });
 
@@ -58,9 +57,7 @@ describe("JobsFilterPopover", () => {
     const labels = screen
       .getAllByRole("checkbox")
       .map((box) => box.getAttribute("aria-label"));
-    expect(labels.slice(0, 3)).toEqual(["Applied", "Interview", "Rejected"]);
-    expect(labels).toContain("Accepted (discovered)");
-    expect(labels).toContain("Include dismissed discovered jobs");
+    expect(labels).toEqual(["Applied", "Interview", "Rejected"]);
     await waitFor(() => expect(screen.getByText("21")).toBeInTheDocument());
   });
 
@@ -151,9 +148,7 @@ describe("JobsFilterPopover", () => {
     await open();
     await user.click(screen.getByRole("button", { name: "Select all" }));
     expect(screen.getByRole("checkbox", { name: "Applied" })).toBeChecked();
-    expect(
-      screen.getByRole("checkbox", { name: "Accepted (discovered)" }),
-    ).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Rejected" })).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getByRole("checkbox", { name: "Applied" })).not.toBeChecked();
   });

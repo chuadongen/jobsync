@@ -107,13 +107,33 @@ function TokenRevealDialog({
     }
   })();
 
-  const claudeSnippet = `npx mcp-remote ${mcpUrl} --header "Authorization: Bearer ${token}"${
-    isInsecureNonLocalhost ? " --allow-http" : ""
-  }`;
+  // Claude Desktop speaks stdio to local servers; mcp-remote bridges that to
+  // this HTTP endpoint. Needs Node on the machine running Claude Desktop.
+  const desktopSnippet = JSON.stringify(
+    {
+      mcpServers: {
+        jobsync: {
+          command: "npx",
+          args: [
+            "-y",
+            "mcp-remote",
+            mcpUrl,
+            "--header",
+            `Authorization: Bearer ${token}`,
+            ...(isInsecureNonLocalhost ? ["--allow-http"] : []),
+          ],
+        },
+      },
+    },
+    null,
+    2,
+  );
+
+  const claudeCodeSnippet = `claude mcp add --transport http jobsync ${mcpUrl} --header "Authorization: Bearer ${token}"`;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Token Created — Save It Now</DialogTitle>
           <DialogDescription>
@@ -130,8 +150,12 @@ function TokenRevealDialog({
           </div>
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground">Client config snippets</p>
-            <CodeSnippet label="OpenClaw / Hermes (streamable-http)" code={ocSnippet} />
-            <CodeSnippet label="Claude Desktop (via mcp-remote)" code={claudeSnippet} />
+            <CodeSnippet
+              label="Claude Desktop: Settings → Developer → Edit Config, merge into claude_desktop_config.json, restart"
+              code={desktopSnippet}
+            />
+            <CodeSnippet label="Claude Code" code={claudeCodeSnippet} />
+            <CodeSnippet label="Other clients (streamable HTTP)" code={ocSnippet} />
           </div>
         </div>
         <DialogFooter>
@@ -212,9 +236,11 @@ export default function McpAccessSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-medium">MCP Endpoint</CardTitle>
-          <CardDescription>Connect AI agents to JobSync via the Model Context Protocol.</CardDescription>
+          <CardDescription>
+            Connect Claude on your Pro or Max plan to JobSync, so tailoring runs on your subscription rather than an API key.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Endpoint URL</Label>
             <div className="flex gap-2 items-center">
@@ -222,6 +248,17 @@ export default function McpAccessSettings() {
               <CopyButton text={mcpUrl} />
             </div>
           </div>
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Generate a token below, named after the client (e.g. &ldquo;Claude Desktop&rdquo;).</li>
+            <li>Paste the config it shows into Claude Desktop or Claude Code and restart the client.</li>
+            <li>
+              In a chat, open a job in JobSync, press <span className="font-medium text-foreground">Copy Claude Prompt</span>{" "}
+              and paste it. Claude reads your bank and base versions, then saves a draft for you to approve here.
+            </li>
+          </ol>
+          <p className="text-xs text-muted-foreground">
+            Claude can add jobs, read your bank and save drafts. It cannot approve, export or mark anything as sent.
+          </p>
         </CardContent>
       </Card>
 
@@ -292,7 +329,7 @@ export default function McpAccessSettings() {
           <DialogHeader>
             <DialogTitle>Generate MCP Token</DialogTitle>
             <DialogDescription>
-              Name this token after the client (e.g. ChatGPT, Hermes, Claude Desktop) &mdash; it&apos;s shown as the source on jobs this token creates.
+              Name this token after the client (e.g. Claude Desktop, Claude Code) &mdash; it&apos;s shown as the source on jobs this token creates.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

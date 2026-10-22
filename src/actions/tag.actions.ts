@@ -42,7 +42,7 @@ export const getTagList = async (
           id: true,
           label: true,
           value: true,
-          _count: { select: { jobs: true, questions: true, skills: true } },
+          _count: { select: { jobs: true } },
         },
         orderBy: { jobs: { _count: "desc" } },
       }),
@@ -78,23 +78,13 @@ export const deleteTagById = async (
   try {
     const user = await requireUser();
 
-    const [jobs, questions, skills] = await Promise.all([
-      prisma.job.count({ where: { tags: { some: { id: tagId } } } }),
-      prisma.question.count({ where: { tags: { some: { id: tagId } } } }),
-      prisma.skill.count({ where: { tagId } }),
-    ]);
+    const jobs = await prisma.job.count({
+      where: { tags: { some: { id: tagId } } },
+    });
 
-    if (jobs > 0 || questions > 0 || skills > 0) {
-      const links = [
-        jobs > 0 ? `${jobs} job(s)` : "",
-        questions > 0 ? `${questions} question(s)` : "",
-        skills > 0 ? `${skills} skill(s)` : "",
-      ]
-        .filter(Boolean)
-        .join(" and ");
-
+    if (jobs > 0) {
       throw new Error(
-        `Skill tag cannot be deleted because it is linked to ${links}.`,
+        `Skill tag cannot be deleted because it is linked to ${jobs} job(s).`,
       );
     }
 

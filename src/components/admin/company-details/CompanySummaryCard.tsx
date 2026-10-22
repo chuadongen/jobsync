@@ -2,7 +2,6 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { BoardCell } from "@/components/admin/BoardCell";
 import { formatUrl } from "@/lib/utils";
 import type { Company } from "@/models/job.model";
 import { hostnameOf } from "./hostname";
@@ -63,9 +62,6 @@ export function CompanySummaryCard({
             ) : (
               "Not watched"
             )}
-          </Fact>
-          <Fact label="Board">
-            <BoardCell company={company} />
           </Fact>
           <Fact label="Industry">{company.industry || "—"}</Fact>
           <Fact label="Size">{company.size || "—"}</Fact>

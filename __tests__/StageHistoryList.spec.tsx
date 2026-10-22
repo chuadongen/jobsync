@@ -17,7 +17,6 @@ const stage = (id: string, label: string, over: any = {}) => ({
   updatedAt: new Date(2026, 8, 1),
   StageType: { id: `t-${id}`, label, value: label.toLowerCase(), statusId: "s", sortOrder: 0, Status: { id: "s", label, value: "interview" } },
   interviewers: [],
-  prepQuestions: [],
   ...over,
 });
 

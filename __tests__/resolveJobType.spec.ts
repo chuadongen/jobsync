@@ -18,14 +18,18 @@ describe("resolveJobType", () => {
     expect(resolveJobType("parttime")).toBe("PT");
   });
 
-  it("defaults to the first entry for empty input", () => {
-    expect(resolveJobType(undefined)).toBe("FT");
-    expect(resolveJobType("")).toBe("FT");
+  it("defaults to the first entry, Internship, for empty input", () => {
+    expect(resolveJobType(undefined)).toBe("IN");
+    expect(resolveJobType("")).toBe("IN");
+  });
+
+  it("resolves Internship", () => {
+    expect(resolveJobType("internship")).toBe("IN");
   });
 
   it("throws a helpful message for an invalid value", () => {
-    expect(() => resolveJobType("Internship")).toThrow(
-      /Invalid jobType "Internship"\. Valid values: Full-time, Part-time, Contract/,
+    expect(() => resolveJobType("Freelance")).toThrow(
+      /Invalid jobType "Freelance"\. Valid values: Internship, Full-time, Part-time, Contract/,
     );
   });
 });

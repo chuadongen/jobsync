@@ -83,11 +83,14 @@ export async function createNewJob(
   const companyText = options?.company ?? `company ${suffix}`;
   const locationText = options?.location ?? `location ${suffix}`;
 
-  // Matches either entry point: the dashboard quick-action card (labeled
-  // "Add Job") when starting from /dashboard, or the myjobs page's own inline
-  // trigger (labeled "New Job", from AddJob.tsx) when already on
-  // /dashboard/myjobs — createNewJob is called from both contexts.
-  await page.getByRole("button", { name: /^(New |Add )?Job$/ }).click();
+  // Matches either entry point: the dashboard's "Add job" link when starting
+  // from /dashboard, or the myjobs page's own inline trigger (labeled
+  // "New Job", from AddJob.tsx) when already on /dashboard/myjobs —
+  // createNewJob is called from both contexts.
+  await page
+    .getByRole("button", { name: /^(New |Add )?Job$/ })
+    .or(page.getByRole("link", { name: /^Add job$/ }))
+    .click();
   await expect(page).toHaveURL(/\/dashboard\/myjobs/);
   // Dashboard's "Job" button auto-opens the dialog via ?add-job=true.
   await expect(page.getByTestId("add-job-dialog-title")).toBeVisible();
@@ -140,16 +143,13 @@ export async function createNewJob(
 export type CleanupRegistry = {
   job: (id: string) => void;
   resume: (title: string) => void;
+  bankEntry: (organisation: string) => void;
   task: (title: string) => void;
-  question: (text: string) => void;
   title: (name: string) => void;
   company: (name: string) => void;
   location: (name: string) => void;
-  activityType: (name: string) => void;
-  activity: (name: string) => void;
   tag: (name: string) => void;
   mcpToken: (name: string) => void;
-  automation: (name: string) => void;
   contact: (name: string) => void;
   contactRole: (name: string) => void;
   // Unused today (both timeline flows pick seeded stage types), but a test
@@ -172,32 +172,26 @@ export const test = base.extend<Fixtures>({
   cleanup: async ({ page }, use) => {
     const jobIds: string[] = [];
     const resumes: string[] = [];
+    const bankEntries: string[] = [];
     const tasks: string[] = [];
-    const questions: string[] = [];
     const titles: string[] = [];
     const companies: string[] = [];
     const locations: string[] = [];
-    const activityTypes: string[] = [];
-    const activities: string[] = [];
     const tags: string[] = [];
     const mcpTokens: string[] = [];
-    const automations: string[] = [];
     const contacts: string[] = [];
     const contactRoles: string[] = [];
     const jobStageTypes: string[] = [];
     await use({
       job: (id) => jobIds.push(id),
       resume: (title) => resumes.push(title),
+      bankEntry: (organisation) => bankEntries.push(organisation),
       task: (title) => tasks.push(title),
-      question: (text) => questions.push(text),
       title: (name) => titles.push(name),
       company: (name) => companies.push(name),
       location: (name) => locations.push(name),
-      activityType: (name) => activityTypes.push(name),
-      activity: (name) => activities.push(name),
       tag: (name) => tags.push(name),
       mcpToken: (name) => mcpTokens.push(name),
-      automation: (name) => automations.push(name),
       contact: (name) => contacts.push(name),
       contactRole: (name) => contactRoles.push(name),
       jobStageType: (name) => jobStageTypes.push(name),
@@ -208,16 +202,13 @@ export const test = base.extend<Fixtures>({
       data: {
         jobIds,
         resumes,
+        bankEntries,
         tasks,
-        questions,
         titles,
         companies,
         locations,
-        activityTypes,
-        activities,
         tags,
         mcpTokens,
-        automations,
         contacts,
         contactRoles,
         jobStageTypes,

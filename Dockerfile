@@ -1,45 +1,41 @@
 FROM node:20.20.2-alpine AS base
 
-# Install dependencies only when needed
 FROM base AS deps
-
 RUN apk add --no-cache libc6-compat
-# Set the working directory
 WORKDIR /app
-
-# Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV DATABASE_URL=file:/data/dev.db
+# The public address is baked into the build: Next only accepts form
+# submissions (server actions) from origins it knows, and behind a proxy
+# such as tailscale serve that origin is this address.
+ARG NEXTAUTH_URL=""
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV DATABASE_URL=file:/data/jobsync.db
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Generate Prisma client
 RUN npx prisma generate
-
 RUN npm run build
 
-# Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
-
-# Set environment variables
+ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 -h /home/nextjs nextjs
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Migrations run at start-up; installing the CLI here avoids a download on
+# every restart.
+RUN npm install -g prisma@6.19.0 && npm cache clean --force
 
-# Set up /data directory with the right permissions
-RUN mkdir -p /data/files/resumes && chown -R nextjs:nodejs /data/files/resumes
+RUN mkdir .next && chown nextjs:nodejs .next
+RUN mkdir -p /data && chown nextjs:nodejs /data
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
@@ -50,7 +46,6 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3737
-
 ENV PORT=3737
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

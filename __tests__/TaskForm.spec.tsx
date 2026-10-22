@@ -45,26 +45,9 @@ document.createRange = () => {
 
 describe("TaskForm Component", () => {
   const mockUser = { id: "user-id" };
-  const mockActivityTypes = [
-    {
-      id: "type-1",
-      label: "Development",
-      value: "development",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "type-2",
-      label: "Testing",
-      value: "testing",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
   const mockResetEditTask = vi.fn();
   const mockOnTaskSaved = vi.fn();
   const mockSetDialogOpen = vi.fn();
-  const mockOnSaveAndStart = vi.fn();
   const user = userEvent.setup({ skipHover: true });
 
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -79,7 +62,6 @@ describe("TaskForm Component", () => {
     beforeEach(() => {
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={null}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}
@@ -97,7 +79,6 @@ describe("TaskForm Component", () => {
 
     it("should show all form fields", () => {
       expect(screen.getByLabelText(/Title/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Activity Type/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Status/i)).toBeInTheDocument();
       expect(screen.getByText(/Priority:/i)).toBeInTheDocument();
       expect(screen.getByText(/% Complete:/i)).toBeInTheDocument();
@@ -131,13 +112,6 @@ describe("TaskForm Component", () => {
       const titleInput = screen.getByLabelText(/Title/i);
       await user.type(titleInput, "New Test Task");
 
-      const activityTypeCombobox = screen.getByLabelText(/Activity Type/i);
-      await user.click(activityTypeCombobox);
-      const developmentOption = screen.getByRole("option", {
-        name: "Development",
-      });
-      await user.click(developmentOption);
-
       const saveBtn = screen.getByTestId("save-task-btn");
       await user.click(saveBtn);
 
@@ -146,7 +120,6 @@ describe("TaskForm Component", () => {
         expect(createTask).toHaveBeenCalledWith(
           expect.objectContaining({
             title: "New Test Task",
-            activityTypeId: "type-1",
             status: "in-progress",
             priority: 5,
             percentComplete: 0,
@@ -164,20 +137,6 @@ describe("TaskForm Component", () => {
 
       expect(mockResetEditTask).toHaveBeenCalledTimes(1);
       expect(mockSetDialogOpen).toHaveBeenCalledWith(false);
-    });
-
-    it("should display activity types in combobox", async () => {
-      const activityTypeCombobox = screen.getByLabelText(/Activity Type/i);
-      await user.click(activityTypeCombobox);
-
-      const options = screen.getAllByRole("option");
-      expect(options.length).toBeGreaterThan(0);
-      expect(
-        screen.getByRole("option", { name: "Development" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("option", { name: "Testing" })
-      ).toBeInTheDocument();
     });
 
     it("should display all status options", async () => {
@@ -244,15 +203,6 @@ describe("TaskForm Component", () => {
       priority: 7,
       percentComplete: 60,
       dueDate: new Date("2026-12-31"),
-      activityTypeId: "type-1",
-      activityType: {
-        id: "type-1",
-        label: "Development",
-        value: "development",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      activities: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -260,7 +210,6 @@ describe("TaskForm Component", () => {
     beforeEach(() => {
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={mockEditTask}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}
@@ -341,7 +290,6 @@ describe("TaskForm Component", () => {
     beforeEach(() => {
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={null}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}
@@ -380,9 +328,6 @@ describe("TaskForm Component", () => {
         priority: 5,
         percentComplete: 0,
         dueDate: null,
-        activityTypeId: null,
-        activityType: null,
-        activities: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -394,7 +339,6 @@ describe("TaskForm Component", () => {
 
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={mockEditTask}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}
@@ -409,174 +353,10 @@ describe("TaskForm Component", () => {
     });
   });
 
-  describe("Save and Start", () => {
-    beforeEach(() => {
-      (createTask as any).mockResolvedValue({
-        success: true,
-        data: { id: "new-task-id" },
-      });
-      (updateTask as any).mockResolvedValue({
-        success: true,
-        data: { id: "task-id" },
-      });
-    });
-
-    it("should not show the Save & Start button when onSaveAndStart is not provided", () => {
-      render(
-        <TaskForm
-          activityTypes={mockActivityTypes}
-          editTask={null}
-          resetEditTask={mockResetEditTask}
-          onTaskSaved={mockOnTaskSaved}
-          dialogOpen={true}
-          setDialogOpen={mockSetDialogOpen}
-        />
-      );
-
-      expect(
-        screen.queryByTestId("save-and-start-task-btn")
-      ).not.toBeInTheDocument();
-    });
-
-    it("should create the task and invoke onSaveAndStart with the new task id", async () => {
-      render(
-        <TaskForm
-          activityTypes={mockActivityTypes}
-          editTask={null}
-          resetEditTask={mockResetEditTask}
-          onTaskSaved={mockOnTaskSaved}
-          dialogOpen={true}
-          setDialogOpen={mockSetDialogOpen}
-          onSaveAndStart={mockOnSaveAndStart}
-        />
-      );
-
-      const titleInput = screen.getByLabelText(/Title/i);
-      await user.type(titleInput, "New Test Task");
-
-      const activityTypeCombobox = screen.getByLabelText(/Activity Type/i);
-      await user.click(activityTypeCombobox);
-      const developmentOption = screen.getByRole("option", {
-        name: "Development",
-      });
-      await user.click(developmentOption);
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-        expect(mockOnTaskSaved).toHaveBeenCalledTimes(1);
-        expect(mockSetDialogOpen).toHaveBeenCalledWith(false);
-        expect(mockOnSaveAndStart).toHaveBeenCalledWith("new-task-id");
-      });
-    });
-
-    it("should update the task and invoke onSaveAndStart with the existing task id", async () => {
-      const mockEditTask: Task = {
-        id: "task-id",
-        userId: "user-id",
-        title: "Existing Task",
-        description: "Existing description",
-        status: "in-progress",
-        priority: 5,
-        percentComplete: 0,
-        dueDate: null,
-        activityTypeId: "type-1",
-        activityType: {
-          id: "type-1",
-          label: "Development",
-          value: "development",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        activities: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      render(
-        <TaskForm
-          activityTypes={mockActivityTypes}
-          editTask={mockEditTask}
-          resetEditTask={mockResetEditTask}
-          onTaskSaved={mockOnTaskSaved}
-          dialogOpen={true}
-          setDialogOpen={mockSetDialogOpen}
-          onSaveAndStart={mockOnSaveAndStart}
-        />
-      );
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(updateTask).toHaveBeenCalledTimes(1);
-        expect(mockOnSaveAndStart).toHaveBeenCalledWith("task-id");
-      });
-    });
-
-    it("should not invoke onSaveAndStart when create fails", async () => {
-      (createTask as any).mockResolvedValueOnce({
-        success: false,
-        message: "Failed to create task",
-      });
-
-      render(
-        <TaskForm
-          activityTypes={mockActivityTypes}
-          editTask={null}
-          resetEditTask={mockResetEditTask}
-          onTaskSaved={mockOnTaskSaved}
-          dialogOpen={true}
-          setDialogOpen={mockSetDialogOpen}
-          onSaveAndStart={mockOnSaveAndStart}
-        />
-      );
-
-      const titleInput = screen.getByLabelText(/Title/i);
-      await user.type(titleInput, "New Test Task");
-
-      const saveAndStartBtn = screen.getByTestId("save-and-start-task-btn");
-      await user.click(saveAndStartBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-      });
-      expect(mockOnSaveAndStart).not.toHaveBeenCalled();
-    });
-
-    it("should not invoke onSaveAndStart when the regular Save button is used", async () => {
-      render(
-        <TaskForm
-          activityTypes={mockActivityTypes}
-          editTask={null}
-          resetEditTask={mockResetEditTask}
-          onTaskSaved={mockOnTaskSaved}
-          dialogOpen={true}
-          setDialogOpen={mockSetDialogOpen}
-          onSaveAndStart={mockOnSaveAndStart}
-        />
-      );
-
-      const titleInput = screen.getByLabelText(/Title/i);
-      await user.type(titleInput, "New Test Task");
-
-      const saveBtn = screen.getByTestId("save-task-btn");
-      await user.click(saveBtn);
-
-      await waitFor(() => {
-        expect(createTask).toHaveBeenCalledTimes(1);
-      });
-      expect(mockOnSaveAndStart).not.toHaveBeenCalled();
-    });
-  });
-
   describe("Dialog State Management", () => {
     it("should not render when dialogOpen is false", () => {
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={null}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}
@@ -592,7 +372,6 @@ describe("TaskForm Component", () => {
     it("should render when dialogOpen is true", () => {
       render(
         <TaskForm
-          activityTypes={mockActivityTypes}
           editTask={null}
           resetEditTask={mockResetEditTask}
           onTaskSaved={mockOnTaskSaved}

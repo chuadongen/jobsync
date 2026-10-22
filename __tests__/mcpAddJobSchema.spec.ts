@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { McpAddJobInputShape, McpUpdateJobInputShape } from "@/models/mcp.schema";
-import { AgentAddJobSchema } from "@/models/agent.schema";
 
 const workplaceType = (shape: Record<string, z.ZodTypeAny>) =>
   z.object({ workplaceType: shape.workplaceType });
@@ -32,8 +31,7 @@ describe("workplaceType schema", () => {
     expect(json.properties.workplaceType.enum).toEqual(["Remote", "Hybrid", "Onsite"]);
   });
 
-  it("carries the same field into update_job and the agent's add_job", () => {
+  it("carries the same field into update_job", () => {
     expect(workplaceType(McpUpdateJobInputShape as any).parse({ workplaceType: "On-site" }).workplaceType).toBe("Onsite");
-    expect(AgentAddJobSchema.parse({ company: "Acme", jobTitle: "Engineer", workplaceType: "On-site" }).workplaceType).toBe("Onsite");
   });
 });

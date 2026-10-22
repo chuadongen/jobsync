@@ -37,7 +37,6 @@ const row = (over: Record<string, unknown> = {}) => ({
     sortOrder: 5,
   },
   interviewers: [],
-  prepQuestions: [],
   Job: {
     id: "j1",
     JobTitle: { label: "Senior Full Stack Developer" },
@@ -97,11 +96,11 @@ describe("InterviewsContainer", () => {
       name: /Expand Senior Full Stack Developer/,
     });
     await userEvent.click(first!);
-    expect(await screen.findByText(/Prep questions/)).toBeInTheDocument();
+    expect(await screen.findByText(/Interviewers \(/)).toBeInTheDocument();
 
     await userEvent.click(second!);
     await waitFor(() =>
-      expect(screen.getAllByText(/Prep questions/)).toHaveLength(1),
+      expect(screen.getAllByText(/Interviewers \(/)).toHaveLength(1),
     );
   });
 

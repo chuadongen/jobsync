@@ -1,12 +1,7 @@
 import { handleAddJobsBatch } from "@/lib/mcp/tools/addJobsBatch";
-import { handleSaveMatchResultsBatch } from "@/lib/mcp/tools/saveMatchResultsBatch";
 import { handleAddJob } from "@/lib/mcp/tools/addJob";
-import { handleSaveMatchResult } from "@/lib/mcp/tools/saveMatchResult";
 
 vi.mock("@/lib/mcp/tools/addJob", () => ({ handleAddJob: vi.fn() }));
-vi.mock("@/lib/mcp/tools/saveMatchResult", () => ({
-  handleSaveMatchResult: vi.fn(),
-}));
 
 const job = (company: string) => ({
   company,
@@ -94,48 +89,3 @@ describe("handleAddJobsBatch", () => {
   });
 });
 
-describe("handleSaveMatchResultsBatch", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("processes every result and labels each by jobId", async () => {
-    (handleSaveMatchResult as any)
-      .mockResolvedValueOnce({ content: [{ type: "text", text: "saved 1" }] })
-      .mockResolvedValueOnce({ content: [{ type: "text", text: "saved 2" }] });
-
-    const result = await handleSaveMatchResultsBatch(
-      {
-        results: [
-          { jobId: "job-1", matchText: "SCORES: match=80 recommendation=good\n\nbody" },
-          { jobId: "job-2", matchText: "SCORES: match=50 recommendation=weak\n\nbody" },
-        ],
-      } as any,
-      "user-1",
-      "my-token",
-    );
-    const text = result.content[0].text;
-
-    expect(handleSaveMatchResult).toHaveBeenCalledTimes(2);
-    expect(text).toContain("[1/2] job-1: saved 1");
-    expect(text).toContain("[2/2] job-2: saved 2");
-  });
-
-  it("continues after a failing item", async () => {
-    (handleSaveMatchResult as any)
-      .mockRejectedValueOnce(new Error("nope"))
-      .mockResolvedValueOnce({ content: [{ type: "text", text: "saved 2" }] });
-
-    const result = await handleSaveMatchResultsBatch(
-      {
-        results: [
-          { jobId: "job-1", matchText: "a" },
-          { jobId: "job-2", matchText: "b" },
-        ],
-      } as any,
-      "user-1",
-      "my-token",
-    );
-
-    expect(result.content[0].text).toContain("[1/2] job-1: Error: nope");
-    expect(result.content[0].text).toContain("[2/2] job-2: saved 2");
-  });
-});

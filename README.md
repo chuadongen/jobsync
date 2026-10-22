@@ -1,302 +1,231 @@
-# JobSync
+# JobSync (personal fork)
 
-<p align="center"><strong>The self-hosted job search assistant with AI-powered resume review, job matching, and automated discovery</strong></p>
+A self-hosted application tracker and resume crafter. It tracks job applications, keeps documents on your own server's filesystem, and builds company- or role-specific resumes from a single bank of your experience. Claude does the tailoring through your own Claude subscription over MCP, so no API key is needed. Nothing becomes a file until you approve it.
 
-<p align="center">
-  <a href="https://demo.jobsync.ca">Live Demo</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#ai-assistant-in-app-chat">AI Assistant</a> ·
-  <a href="#mcp-server-ai-agent-integration">MCP Setup</a> ·
-  <a href="https://github.com/Gsync/jobsync/wiki">Help</a>
-</p>
+Forked from [Gsync/jobsync](https://github.com/Gsync/jobsync) (MIT). The automations, in-app AI chat, AI provider settings, activity timer, daily goals and question bank were removed; the experience bank, resume and letter pipeline, document vault and availability planner were added.
 
-<p align="center">
-  <a href="https://github.com/Gsync/jobsync/releases/latest"><img src="https://img.shields.io/github/v/release/Gsync/jobsync" alt="Latest Release"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/Gsync/jobsync" alt="License"></a>
-  <a href="https://github.com/Gsync/jobsync/stargazers"><img src="https://img.shields.io/github/stars/Gsync/jobsync?style=social" alt="GitHub Stars"></a>
-  <img src="https://img.shields.io/badge/self--hosted-Docker-blue" alt="Self-hosted with Docker">
-</p>
+## How it works
 
-Track every application, get AI resume reviews and job matches, and discover new openings automatically — **free, open source, and your data never leaves your server.**
-
-🔒 Self-hosted · 🤖 Local AI via Ollama or any cloud provider · 🔌 MCP server for Claude Desktop, Hermes, etc
-
-![AI Job Match](./screenshots/jobsync-ai-jobmatch.gif)
-
-![App Snapshot](./screenshots/jobsync-dashboard.png?raw=true "Jobsync dashboard")
-
-⭐ If JobSync helps your search, a star helps other job seekers find it.
-
-## Why JobSync?
-
-- **One place for your whole search:** applications, resumes, contacts, interviews, tasks and AI help in a single source of truth, instead of scattered spreadsheets, notes and tabs.
-- **Free forever:** no subscription and no paywalled tiers.
-- **Private:** self-hosted, so your resumes and applications stay on your own server.
-- **Local AI, no API costs:** run models on your own machine with Ollama, or bring a cloud provider key.
-
-## Key Features
-
-- **Application Tracker:** Record every application with its company, title, dates and current status.
-
-  ![Jobs Applied List](./screenshots/jobsync-jobs.png?raw=true "Jobsync Jobs Page")
-
-- **Monitoring Dashboard:** See your search progress, activity and daily goals at a glance.
-- **Resume Management:** Store resumes, export them as PDFs, and import existing PDF or Word files with AI.
-- **Automated Job Discovery:** Schedule searches over company job boards and AI-match each listing to your resume. [Details](#automated-job-discovery)
-- **Task & Activity Management:** Track tasks and time your activities. [Tasks](https://github.com/Gsync/jobsync/wiki/Tasks) · [Activities](https://github.com/Gsync/jobsync/wiki/Activities)
-- **Contacts:** Keep recruiters, interviewers and references, linked to the jobs they touched. [Details](https://github.com/Gsync/jobsync/wiki/Contacts)
-- **Company Pages:** One page per company with its jobs, people and links, plus a watchlist. [Details](https://github.com/Gsync/jobsync/wiki/Companies)
-- **Question Bank:** Build a library of interview questions and answers, tagged by skill.
-- **Data Backup & Restore:** Export everything as one zip, import it anywhere, and undo an import. [Details](https://github.com/Gsync/jobsync/wiki/Data-Backup)
-- **AI Assistant:** A docked chat that reviews resumes, scores job matches, writes cover letters and adds jobs you paste in. [Details](#ai-assistant-in-app-chat)
-- **AI Agent Integration (MCP):** Add jobs and questions from Claude Desktop and other agents. [Details](#mcp-server-ai-agent-integration)
-
-## Quick Start
-
-Make sure [Docker](https://www.docker.com) is installed and running, then:
-
-```sh
-git clone https://github.com/Gsync/jobsync.git
-cd jobsync
-docker compose up
+```
+Experience Bank ──► Base versions (PM, SWE, Cloud, …) ──► Job variant ──► Approve ──► PDF ──► Mark as sent
+   (facts)              (your curated starting points)     (Claude or you)   (you)              (frozen copy in the
+                                                                                                application folder)
 ```
 
-> **Note:** The first startup downloads the prebuilt app image, so give it a moment before opening the browser.
+- **Experience Bank** holds every education entry, role, project, leadership position, award, certification and skills line, each with reusable bullets and tags. It is the single source of truth.
+- **Base versions** are your curated resumes for a kind of role. Each line points back to a bank bullet.
+- **Variants** are tailored to one job. Claude reads the job description, your bank and the right base, then saves a draft variant. It may reword a bullet to land harder, but every line must cite the bank bullet it came from; the server rejects anything that does not.
+- **Approval is yours alone.** The MCP server has no tool to approve, export or send. Drafts have no PDF. Editing an approved resume sends it back to draft.
+- **Mark as sent** writes the PDF into that job's folder on disk, saves the job description beside it, and freezes the resume as the record of what went out.
 
-Open [http://localhost:3737](http://localhost:3737) and create your account. That's it!
+Cover letters follow the same draft → approved → sent lifecycle.
 
-API keys for AI providers can be configured in **Settings** after signing in.
+## Features
 
-### Configuration (Optional)
-
-Environment variables can be set in `docker-compose.yml`:
-
-| Variable | Description |
+| Area | What it does |
 |---|---|
-| `TZ` | Your timezone (e.g. `America/Edmonton`). **Set this on remote servers** to avoid activity time shifts. |
-| `AUTH_SECRET` | Auto-generated if not set. To set manually: `openssl rand -base64 32` |
-| `ENCRYPTION_KEY` | Encrypts the API keys you save in Settings. **Set your own** (`openssl rand -base64 32`) before adding any keys, and never change it afterwards — a new value makes every stored API key unrecoverable. |
-| `NEXTAUTH_URL` | The address you open JobSync at. Defaults to `http://localhost:3737`; on a homelab server, use the server's IP or hostname. |
-| `MCP_ENABLED` | Set to `false` to turn off the [MCP server](#mcp-server-ai-agent-integration). Enabled by default in `docker-compose.yml`. |
+| Jobs | Pipeline with Singapore-oriented sources and stages (Online Assessment, HireVue, Assessment Centre), role start and end dates, timeline of stages and interviewers, contacts, notes, tasks. An application seasons bar across the top shows when your targets take applications |
+| Interviews | Every round across all jobs in one list, searchable and filterable by round, company, stage and job status |
+| Seasons | Target companies and role types with their application windows per intake: open, closing soon, opens soon, closed. Claude researches windows with sources; they stay suggestions until you confirm them. Role periods that clash with your availability show in red, and matching jobs are linked automatically. Once a season closes, **Estimate next year** copies its windows forward a year (anchored on when your matching jobs actually appeared), marked as estimates for Claude to verify |
+| Interview prep | Each round on a job's timeline has your own notes plus two Claude sections: prep before the round, and a debrief after it that checks the prep against what actually happened. Earlier debriefs at the same company feed the next prep |
+| Experience Bank | Entries and bullets with tags, archive, usage warnings, Claude's suggested additions for you to accept or reject, contact details for the resume header, JSON import and export |
+| Resumes | Base and variant editor with a live A4 preview and a one-page check, reorder sections, items and bullets, see where Claude reworded a bullet and revert to the bank original. New lines come only from the bank: **Add from bank** and **Add bullet from bank** list what the resume does not use yet, so to add something new, put it in the bank first |
+| Base gaps | On each base version: what that kind of role asks for across the job descriptions Claude has read, how well your bank covers each requirement, how applications sent with it fared and where they stopped, bullets with no measurable result, and Claude's written review. Small numbers are labelled as a rough guide |
+| Cover letters | Editor with preview, same approval gate |
+| Documents | Upload transcripts, certificates and testimonials into a readable folder layout; link them to applications |
+| Availability | Confirmed and tentative blocks (exchange, trips, exams) on a timeline against the role periods of open applications, with clash warnings |
+| Tasks | To-dos with due dates, linked to jobs, searchable and groupable |
+| Library | Shared lists the job forms pick from: companies (with their jobs), job titles, locations, sources, skills, contacts, contact roles and stages |
+| Dashboard | Open applications, interviews, closing dates and application windows in the next two weeks, drafts awaiting approval, suggestions to check, clashes |
+| Settings | MCP Access (tokens and client config for Claude), Data & Backup (one-click zip of the database and every file; bank export), Appearance |
+
+## Files on disk
+
+Everything lives under `DATA_DIR` (`./data` in development, `/data` in Docker), in folders you can browse without the app:
+
+```
+data/
+├── vault/
+│   ├── transcript/Transcript_SMU_AY2025.pdf
+│   └── certificate/…
+└── applications/
+    └── 2026/
+        └── Shopee - Product Manager Intern/
+            ├── job-description.md
+            ├── Your Name - Resume.pdf
+            └── Your Name - Cover Letter.pdf
+```
+
+Sent files are named for the recruiter (your name, then Resume or Cover Letter), and the PDF title matches. Files are never overwritten: a name clash gets " (2)" appended. Deleting a sent resume's record keeps its PDF.
+
+## Trying it in a Codespace
+
+No server needed: on GitHub, open the repository, then **Code → Codespaces → Create codespace**. The first start installs everything and creates the database (a few minutes); the app then opens in a new tab. Create your account, and import your bank file on the Experience Bank page.
+
+The Codespace's database and files live only in that Codespace. Download a backup from **Settings → Data & Backup** before deleting it.
+
+## Running it locally
+
+Requires Node 20+.
+
+```bash
+npm install
+cp .env.example .env
+npx prisma migrate deploy
+npm run dev            # http://localhost:3737
+```
+
+The first account you create becomes the only one; sign-up closes after that.
+
+## Connecting Claude
+
+1. In JobSync, go to **Settings → MCP Access**, generate a token named after the client, and copy the config it shows.
+2. **Claude Desktop:** Settings → Developer → Edit Config, merge the `jobsync` entry into `claude_desktop_config.json`, restart. This uses [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), so Node must be installed on that computer.
+   **Claude Code:** run the `claude mcp add …` command shown.
+3. Open a job in JobSync and press **Copy Claude Prompt**, then paste it into Claude. Claude picks a base, tailors it to the job description, saves a draft variant with notes on what it changed, and gives you the review link.
+
+Tools Claude has:
+- **Jobs:** add jobs (one at a time or in a batch), find, update and search them; read a job's rounds and add a round you report; save prep notes and debriefs.
+- **Seasons:** list targets; save researched application windows (as suggestions).
+- **Resumes:** read the bank, base versions and resumes; save a variant or base draft; suggest bank additions; save a cover letter draft; list documents.
+- **Gaps:** record a job's requirements and how the bank covers them (done while tailoring); read a base's gap data; save a gap review.
+
+Claude cannot approve, export or send anything, confirm a window, or edit your own stage notes.
+
+Prompts: `tailor_resume`, `add_to_bank`, `research_windows`, `prep_interview`, `debrief_interview`, `review_base_gaps`. The app also has copy-prompt buttons in the matching places: **Research with Claude** on Seasons, **Prep with Claude** and **Debrief with Claude** on each round, and **Ask Claude for a review** on a base's Gaps tab.
+
+## Seeding your bank
+
+On the Experience Bank page, **Import** accepts a bank JSON file (`version: 1`): contact header, entries with keyed bullets, and base versions that reference those keys. Import appends; it never overwrites. **Export** produces the same format, so a bank moves between installs. Keep your filled-in bank file out of this repository: it contains your contact details.
+
+## Tests
+
+```bash
+npm test               # unit and integration (real SQLite in a temp dir)
+npm run lint
+npx tsc --noEmit
+npm run test:e2e       # Playwright
+```
+
+Integration specs (`__tests__/*.integration.spec.ts`) cover the rules that matter most: bullet provenance, the approval gate, frozen snapshots, file paths that cannot escape `DATA_DIR`, MCP scopes, and bank import validation.
+
+## Deployment (Ubuntu server on Tailscale)
+
+JobSync runs as one Docker container bound to `127.0.0.1` only. `tailscale serve` puts it on your tailnet over HTTPS on its own port, so it sits beside your other services without touching them, and nothing is exposed to the internet.
+
+```
+your laptop / phone ──tailnet, HTTPS──► tailscale serve :8443 ──► 127.0.0.1:3737 ──► container ──► ./jobsync-data
+```
+
+### What you need
+
+- Docker Engine with the Compose plugin ([install guide](https://docs.docker.com/engine/install/ubuntu/)). Check with `docker compose version`.
+- Tailscale on the server, already in your tailnet.
+- **HTTPS certificates enabled for your tailnet:** Tailscale admin console → **DNS** → turn on **MagicDNS** and **HTTPS Certificates**. If your other services already use `https://…ts.net`, this is done.
+
+### 1. Get the code
+
+```bash
+git clone https://github.com/chuadongen/jobsync.git ~/jobsync
+cd ~/jobsync
+```
+
+### 2. Pick a port and an address
+
+```bash
+sudo tailscale serve status          # HTTPS ports your other services already use
+ss -ltn | grep -E ':3737\b'          # anything already on 3737?
+tailscale status --json | grep -m1 '"DNSName"'   # e.g. "myserver.tail1234.ts.net."
+```
+
+Choose an HTTPS port nothing else uses on the tailnet side (this guide uses **8443**) and a local port that is free (default **3737**).
+
+### 3. Configure
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set:
+
+| Variable | Value |
+|---|---|
+| `NEXTAUTH_URL` | `https://myserver.tail1234.ts.net:8443` (your DNS name without the trailing dot, and your port) |
+| `JOBSYNC_PORT` | `3737`, or the free local port you picked |
+| `JOBSYNC_DATA` | `./jobsync-data` is fine; any absolute path works |
+| `BACKUP_TOKEN` | output of `openssl rand -hex 32` |
+| `TZ` | `Asia/Singapore` |
+
+Leave `AUTH_SECRET` empty: one is generated on first start and kept in the data folder, so restarts do not log you out. The lines under "Local development only" are ignored on the server.
+
+### 4. Build and start
+
+```bash
+./deploy.sh
+```
+
+The first build takes a few minutes. The script waits until the app answers on `127.0.0.1`.
+
+### 5. Put it on the tailnet
+
+```bash
+sudo tailscale serve --bg --https=8443 http://127.0.0.1:3737
+sudo tailscale serve status
+```
+
+This adds one entry and leaves your other `serve` entries as they are. Do not run `tailscale serve reset`, which clears all of them. JobSync must be served at the root of its own port, not under a path such as `/jobsync`.
+
+### 6. Create your account straight away
+
+Open `https://myserver.tail1234.ts.net:8443` from any device on your tailnet and create your account. The first account is the only one and sign-up closes after it, so do this before anyone else on your tailnet could.
+
+Then import your bank file on the **Experience Bank** page, and connect Claude as described in [Connecting Claude](#connecting-claude). The computer running Claude Desktop needs Tailscale running. The config snippet in Settings already uses the HTTPS address.
+
+### 7. Nightly backups
+
+```bash
+mkdir -p ~/jobsync-backups
+crontab -e
+```
+
+Add (adjust the paths to your home directory):
+
+```
+30 3 * * * /home/YOU/jobsync/scripts/backup.sh /home/YOU/jobsync-backups >> /home/YOU/jobsync-backups/backup.log 2>&1
+```
+
+Each run saves `jobsync-YYYY-MM-DD-HHMMSS.zip` (database, documents and sent PDFs) and keeps the newest 30 (`KEEP=60 scripts/backup.sh …` to keep more). The script refuses anything that is not a real zip, so a failed run shows in `backup.log` instead of leaving a broken file. Run it once by hand to check, and copy the backup folder somewhere off the server from time to time, for example with `rsync` to another tailnet machine.
 
 ### Updating
 
-From the project directory, run the deploy script to pull the latest image and restart:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Gsync/jobsync/main/deploy.sh | sudo bash -s
+```bash
+cd ~/jobsync && ./deploy.sh
 ```
 
-On **Windows**, run the PowerShell equivalent from the project directory instead (`deploy.sh` needs WSL or Git Bash; `deploy.ps1` runs natively):
+This pulls the checked-out branch (`main`), rebuilds and restarts. `./deploy.sh <branch>` switches to another branch first. Data in `jobsync-data` is untouched; database migrations run on start.
 
-```powershell
-.\deploy.ps1
+### Restoring a backup
+
+```bash
+cd ~/jobsync
+docker compose down
+unzip -o ~/jobsync-backups/jobsync-2026-10-21-033000.zip -d ./jobsync-data
+docker compose up -d
 ```
 
->Note: If you are updating in a homelab environment, edit `NEXTAUTH_URL` in your `.env` file to use your server IP address instead of `localhost`. See `.env.example` for the expected format.
+`jobsync.db`, `vault/` and `applications/` land back in the data folder. You will need to sign in again if the restore is onto a fresh data folder.
 
-## Features in Detail
+### Troubleshooting
 
-### AI Assistant (In-App Chat)
+| Symptom | Fix |
+|---|---|
+| The page will not load over HTTPS | `sudo tailscale serve status` should list your port pointing at `127.0.0.1:3737`; `curl -I http://127.0.0.1:3737/signin` on the server should return 200. |
+| Login loops back to the sign-in page, or buttons do nothing | `NEXTAUTH_URL` must match the address in the browser exactly, port included. It is built into the image, so after fixing `.env`, run `./deploy.sh` again. |
+| Port already in use on start | Change `JOBSYNC_PORT` in `.env`, use the same port in the `tailscale serve` command, and run `./deploy.sh`. |
+| Claude Desktop shows no jobsync tools | Tailscale must be running on that computer; the token must be current (Settings → MCP Access); restart Claude Desktop fully after editing its config. |
+| Anything else | `docker compose logs --tail 100` |
 
-All of JobSync's AI features live in one place: a chat panel that docks to the side of the app instead of taking it over, so the page you were on stays visible and usable while the assistant works.
+## Licence
 
-Open it from the **AI Assistant** button in the header, or let the app open it for you — the **Review** button on a resume and the **Match with AI** and **Cover Letter** buttons on a job all start the matching request in the panel.
-
-What you can ask for:
-
-- **Resume review** — a full review of any of your resumes, with scores and written feedback, saved to the resume so you can come back to it.
-- **Job match** — how well one of your resumes fits the job you're currently viewing, with a match score, a recommendation, and a write-up, saved to the job. Open the job first; the assistant scores the job on the page.
-- **Cover letter** — a tailored letter for the job you're viewing, written from your resume and the job description (and any guidance from an earlier match), saved to your documents. Ask again and you get a new letter rather than losing the old one.
-- **Add a job from a posting** — paste a job posting into the chat and ask it to add the job. It picks out the company, title, location, salary, tags and the rest, and shows you all of it on a confirmation card before anything is written. The description is saved exactly as you pasted it, not as a summary. Nothing reaches your database until you press Confirm.
-
-The reviews, matches and letters are the same analyses the dedicated panels used to produce — the chat is a new way in, not a lighter-weight version.
-
-The assistant is deliberately narrow about what it can see: it reads your resumes and the single job you're looking at, and nothing else. It can't list or search your jobs, and it can't see tasks or activities. Pasted postings are also treated as untrusted text, so instructions hidden inside a posting can't make the assistant act on your data.
-
-Pick a model under **Settings > AI Settings** before using the panel — it needs one that supports tool calling, and it will tell you rather than guessing if none is set. See [known-good models](#supported-ai-model-providers) for the ones that have been tested, including a fully local option.
-
-### PDF Resume Export
-
-Export any resume as a professionally formatted PDF directly from the resume page. Choose between two layouts — a clean **Simple** template and a more polished **Professional** template. If a PDF attachment already exists, you'll be prompted to replace it or keep the download only.
-
-### Resume Import
-
-Import an existing resume from a PDF or Word (.docx) file. AI extracts structured data — contact info, summary, skills, work experience, education, and certifications — and presents each section as a review card. You can accept or skip individual sections before saving them to your resume.
-
-### Automated Job Discovery
-
-Set up automations that search for new jobs on a schedule and AI-match them against your resume, so relevant openings come to you.
-
-- **Greenhouse** — track specific companies by name from a built-in directory (or by pasting a board URL). Each run pulls every published role from those companies' Greenhouse boards, ranks them against your target titles, skills, and resume with a fast local relevance score, and runs the AI match on only the top candidates to keep costs bounded. No API key required.
-
-- **Lever** — same company-tracking workflow as Greenhouse, backed by a built-in directory of 1,160+ companies (or paste a board URL). Automatically resolves the right regional API (`lever.co` or `eu.lever.co`) per company and carries full remote/hybrid/onsite signal from the listing. No API key required.
-
-- **Ashby** — same company-tracking workflow, backed by a built-in directory of 1,860+ companies (or paste a board URL). No API key required.
-
-More job board sources are on the way. Discovered jobs are surfaced for review — accept the ones you like to promote them into your job tracker, or dismiss the rest.
-
-### MCP Server (AI Agent Integration)
-
-JobSync exposes an MCP server so AI agents (Claude Desktop, Hermes, OpenClaw, etc.) can add job applications and Question Bank entries directly, with your approval.
-
-#### Use Case
-
-Browsing a job posting or reading an interview question elsewhere and don't want to break your flow to log it manually? Just ask your connected AI agent, for example:
-
-- *"Add this job to JobSync (copy/paste the complete job details or try providing a link): Senior Backend Engineer at Acme Corp, JobType, location, Job description... "*
-- *"I just got asked this in an interview — add it to my Question Bank: 'How would you design a rate limiter?' with my answer: ..."*
-
-The agent resolves or creates the company, title, location, and tags by name, and reports back what it matched versus created — so your data stays de-duplicated without you having to switch to the app.
-
-When you add a job with a substantial description and you've set a **default resume** (Profile), the agent also analyzes the fit against that resume and saves a job match score — no round trip to the app needed. The result shows up on the job just like an in-app AI match, scores, recommendation, and write-up included.
-
-#### 1. Generate a token
-
-1. Sign in to JobSync and go to **Settings > MCP Access**.
-2. Click **Generate**, give it a name (e.g. the client you'll connect, like "Claude Desktop"), and pick an expiry.
-3. Copy the token and config snippets shown — the full token is only displayed once.
-
-#### 2. Add it to your MCP client
-
-<details>
-<summary><strong>Claude Desktop</strong></summary>
-
-1. Open Claude Desktop → **Settings > Developer > Edit Config**. This opens `claude_desktop_config.json` in your default editor.
-2. Paste the "Claude Desktop (via mcp-remote)" snippet from the reveal dialog into `mcpServers`, e.g.:
-
-```json
-{
-  "mcpServers": {
-    "jobsync": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "http://<your-jobsync-url>/api/mcp",
-        "--header",
-        "Authorization: Bearer <your-token>"
-      ]
-    }
-  }
-}
-```
-
-3. Save and fully restart Claude Desktop (quit, not just close the window).
-
-> **Note:** Claude Desktop only supports local (stdio) MCP servers directly, so `mcp-remote` is required as a bridge to JobSync's remote endpoint.
-
-</details>
-
-<details>
-<summary><strong>Other clients (OpenClaw, Hermes, etc.)</strong></summary>
-
-Clients that support `streamable-http` natively can connect directly without `mcp-remote`:
-
-```json
-{
-  "mcpServers": {
-    "jobsync": {
-      "type": "streamable-http",
-      "url": "http://<your-jobsync-url>/api/mcp",
-      "headers": { "Authorization": "Bearer <your-token>" }
-    }
-  }
-}
-```
-
-</details>
-
-> **Self-hosting on a home network?** If your JobSync URL is a plain `http://` LAN address (not `localhost` or HTTPS), add `--allow-http` to the `mcp-remote` args — it refuses non-HTTPS URLs by default. The Settings page adds this flag automatically when it detects a non-localhost HTTP URL.
-
-
-## Help
-
-In-app usage guides — getting started, jobs, automations, and MCP access — live in the [GitHub Wiki](https://github.com/Gsync/jobsync/wiki).
-
-## Contributing
-
-We welcome contributions! Please read our [Contributing Guidelines](./CONTRIBUTING.md) to get started. This project follows a [Code of Conduct](./CODE_OF_CONDUCT.md) — by participating, you agree to uphold its standards.
-
-### Credits
-
-- <a href="https://github.com/facebook/react">React</a>
-- <a href="https://github.com/vercel/next.js">Next</a>
-- <a href="https://github.com/shadcn-ui/ui">Shadcn</a>
-- <a href="https://github.com/prisma/prisma">Prisma</a>
-- <a href="https://github.com/tailwindlabs/tailwindcss">Tailwind</a>
-- <a href="https://github.com/ueberdosis/tiptap">Tiptap</a>
-- <a href="https://github.com/plouc/nivo">Nivo</a>
-- <a href="https://github.com/sqlite/sqlite">Sqlite</a>
-- <a href="https://github.com/vercel/ai">Vercel AI-SDK</a>
-- <a href="https://github.com/ollama/ollama">Ollama</a>
-
-### Supported AI Model Providers
-
-API keys for all cloud providers can be configured in **Settings > AI Settings** after signing in. Ollama is selected as the default provider.
-
-> **Note:** Selected models must support **structured output** and **tool calling** for AI features to work correctly — the AI Assistant panel works by calling tools, so a model without tool support will reply with text instead of doing anything.
-
-**Known-good models.** The AI Assistant has been tested end to end with `qwen3.5:9b` on Ollama (fully local), `deepseek-v4-flash`, and OpenAI `gpt-4.1`. Other tool-calling models should work, but these are the ones exercised against the full set of assistant features.
-
-<details>
-<summary><strong>Ollama (Local)</strong></summary>
-
-Works with [Ollama](https://ollama.com) to run AI models locally on your machine.
-
-- Make sure Ollama is installed and running on the same system
-- AI settings will show a list of available models based on what you have downloaded in Ollama
-- **Recommended:** Increase the Ollama context length from the default 4k to 16k — this helps automated job matching avoid truncating longer resume/job description prompts. The AI Assistant, resume review, job match and cover letter features aren't affected: they ask Ollama for the context size they need on every call, so raising this setting won't change them. Don't raise it much further either — a very large default costs you noticeably slower responses for no benefit
-- No API key required — runs entirely on your hardware
-- If you are running jobsync on a homelab server, you can expose ollama to network from Ollama settings on your local machine. Also make sure your ollama base url is pointed to your local system IP under API keys section of settings.
-
-</details>
-
-<details>
-<summary><strong>OpenAI</strong></summary>
-
-- Get your API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- Add your API key in **Settings > AI Settings**
-- Select **OpenAI** as the provider and choose your preferred model
-- Available models are fetched dynamically from the OpenAI API
-
-</details>
-
-<details>
-<summary><strong>DeepSeek</strong></summary>
-
-- Get your API key at [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
-- Add your API key in **Settings > AI Settings**
-- Select **DeepSeek** as the provider and choose your preferred model
-
-</details>
-
-<details>
-<summary><strong>Google Gemini</strong></summary>
-
-- Get your API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
-- Add your API key in **Settings > AI Settings**
-- Select **Gemini** as the provider and choose your preferred model
-
-</details>
-
-<details>
-<summary><strong>OpenRouter</strong></summary>
-
-Access a wide range of AI models from multiple providers through a single API.
-
-- Get your API key at [openrouter.ai/keys](https://openrouter.ai/keys)
-- Add your API key in **Settings > AI Settings**
-- Select **OpenRouter** as the provider and choose from available models
-
-</details>
-
-### Note
-
-- If you are updating from an old version and already logged in, please try logging out and login again.
-
-## Support the Project
-
-If JobSync has been helpful in your job search, consider giving it a star on GitHub! It helps others discover the project and motivates continued development.
-
-Every star means a lot — thank you for your support!
-
+MIT, as upstream. See [LICENSE](./LICENSE).

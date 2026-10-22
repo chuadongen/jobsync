@@ -1,5 +1,3 @@
-import type { JobBoard, LeverHost } from "@/models/automation.model";
-import { CoverLetter, Resume } from "./profile.model";
 import type { JobContactLink } from "./contact.model";
 // Type-only: jobStage.model.ts imports Tag from here and has a runtime export,
 // so a value import back would make a real module cycle.
@@ -31,8 +29,6 @@ export interface Tag {
   createdBy: string;
   _count?: {
     jobs: number;
-    questions: number;
-    skills: number;
   };
 }
 
@@ -53,17 +49,20 @@ export interface JobResponse {
   description: string;
   jobUrl: string;
   applied: boolean;
-  resumeId?: string;
-  Resume?: Resume;
-  coverLetterId?: string;
-  CoverLetter?: CoverLetter;
-  matchScore?: number | null;
-  matchData?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  resumeDocs?: { id: string; name: string; status: string }[];
+  coverLetters?: { id: string; title: string; status: string }[];
+  documents?: {
+    id: string;
+    title: string;
+    category: string;
+    fileName: string;
+  }[];
   tags?: Tag[];
   contactLinks?: JobContactLink[];
   stages?: JobStage[];
   createdVia?: string | null;
-  discoveryStatus?: string | null;
   descriptionCompleteness?: DescriptionCompleteness | null;
   _count?: { Notes?: number };
 }
@@ -77,7 +76,6 @@ export const JOB_SORT_FIELDS = {
   title: "asc",
   company: "asc",
   location: "asc",
-  matchScore: "desc",
   source: "asc",
 } as const satisfies Record<string, SortDir>;
 
@@ -102,9 +100,6 @@ export interface Company {
   logoUrl?: string;
   watched?: boolean;
   watchedAt?: Date | null;
-  atsProvider?: JobBoard | null;
-  atsToken?: string | null;
-  atsHost?: LeverHost | null;
   websiteUrl?: string | null;
   careersUrl?: string | null;
   industry?: string | null;
@@ -156,6 +151,7 @@ export interface Country {
 }
 
 export enum JOB_TYPES {
+  IN = "Internship",
   FT = "Full-time",
   PT = "Part-time",
   C = "Contract",
@@ -171,10 +167,8 @@ export enum WORKPLACE_TYPES {
 // values; OR within a field, AND across fields.
 export type JobFacets = {
   statuses: string[];
-  acceptedDiscovered: boolean;
   jobTypes: string[];
   workplaces: string[];
-  includeDismissed: boolean;
 };
 
 // Deep-link filters from the Library tables, kept separate from the popover.
@@ -190,7 +184,6 @@ export type JobFilterCounts = {
   total: number;
   // Keyed by JobStatus.id.
   statusCounts: Record<string, number>;
-  acceptedDiscovered: number;
 };
 
 // Matches free-text input against a fixed enum, ignoring case and separators,
